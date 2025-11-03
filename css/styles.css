@@ -1,0 +1,53 @@
+
+
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Repuestos | Demo MVC</title>
+<style>
+/* ===== styles.css ===== */
+:root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --pri:#38bdf8; --ok:#22c55e; --err:#ef4444; }
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%);color:#e5e7eb}
+header{display:flex;gap:.75rem;align-items:center;justify-content:space-between;padding:1rem 1.25rem;position:sticky;top:0;background:#0b1220aa;backdrop-filter:blur(8px);border-bottom:1px solid #1f2937}
+header h1{font-size:1.05rem;margin:0;color:#e2e8f0} header nav a{color:#94a3b8;text-decoration:none;margin:0 .5rem} header nav a.active{color:#38bdf8}
+.wrap{max-width:1024px;margin:0 auto;padding:1.5rem}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:1rem}
+.card{grid-column:span 12;background:#0b1220;border:1px solid #1f2937;border-radius:16px;padding:1rem 1.25rem;box-shadow:0 10px 30px #00000033}
+.two{grid-column:span 12}@media(min-width:900px){.two{grid-column:span 6}}
+.title{font-weight:700;margin:0 0 .5rem}.muted{color:#94a3b8}
+input,select,button{font:inherit} input,select{width:100%;padding:.75rem;border-radius:12px;border:1px solid #1f2937;background:#0b1220;color:#e5e7eb}
+button{padding:.7rem 1rem;border-radius:12px;border:1px solid #1f2937;background:#111827;color:#e5e7eb;cursor:pointer}
+button.primary{background:linear-gradient(180deg,#38bdf8,#0284c7);border:none}
+.row{display:flex;gap:.75rem;align-items:center}
+.between{display:flex;justify-content:space-between;align-items:center}
+.table{width:100%;border-collapse:collapse;border:1px solid #1f2937;border-radius:14px;overflow:hidden}
+.table th,.table td{padding:.75rem;border-bottom:1px solid #1f2937;text-align:left}
+.pill{padding:.15rem .6rem;border-radius:999px;background:#1f2937;color:#9ca3af;font-size:.8rem}
+.ok{color:var(--ok)} .err{color:var(--err)} .pri{color:var(--pri)}
+.toast{position:fixed;right:1rem;bottom:1rem;display:flex;gap:.6rem;align-items:center;background:#0b1220;border:1px solid #1f2937;padding:.75rem 1rem;border-radius:12px;opacity:0;transform:translateY(10px);transition:.25s}
+.toast.show{opacity:1;transform:translateY(0)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+<h1>🔧 Repuestos — Demo MVC</h1>
+<nav>
+<a href="#/login" data-link>Login</a>
+<a href="#/register" data-link>Registro</a>
+<a href="#/productos" data-link>Productos</a>
+</nav>
+</header>
+
+
+<main class="wrap">
+<section id="view-root" class="grid"></section>
+</main>
+
+
+<div id="toast" class="toast"><span id="toast-icon">ℹ️</span><span id="toast-text">Listo</span></div>
+
+
+<script>

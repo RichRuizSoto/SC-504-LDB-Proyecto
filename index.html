@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Repuestos Zona Honda | Proyecto SC-504</title>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="favicon.ico">
+</head>
+
+<body>
+  <header>
+    <h1>🔧 Repuestos Zona Honda</h1>
+    <nav>
+      <a href="#/login">Login</a>
+      <a href="#/register">Registro</a>
+      <a href="#/productos">Productos</a>
+    </nav>
+  </header>
+
+  <!-- Aquí se cargan dinámicamente las vistas (login, register, productos) -->
+  <main id="view-root" class="wrap"></main>
+
+  <!-- Scripts del frontend MVC -->
+  <script src="js/services/api.js"></script>
+  <script src="js/utils/ui.js"></script>
+  <script src="js/models/UserModel.js"></script>
+  <script src="js/controllers/AuthController.js"></script>
+  <script src="js/controllers/ProductController.js"></script>
+  <script src="js/views/LoginView.js"></script>
+  <script src="js/views/RegisterView.js"></script>
+  <script src="js/views/ProductosView.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
