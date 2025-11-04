@@ -20,15 +20,6 @@
         : () => document.createTextNode("EmpresasView no definida"),
   };
 
-  // function render(viewFn){
-  //     const root = $('#view-root');
-  //     if(!root) return;
-  //     while(root.firstChild){
-  //         root.removeChild(root.firstChild);
-  //     }
-  //     root.appendChild(viewFn());
-  // }
-
   function render(viewFn) {
     const root = document.getElementById("view-root");
     while (root.firstChild) root.removeChild(root.firstChild);

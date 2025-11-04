@@ -1,7 +1,7 @@
-function RegisterView(){
-  const el = document.createElement('div');
-  el.className = 'register-wrapper';
-  
+function RegisterView() {
+  const el = document.createElement("div");
+  el.className = "register-wrapper";
+
   el.innerHTML = `
     <div class="register-card">
       <h2 class="register-title">Crear cuenta</h2>
@@ -57,29 +57,27 @@ function RegisterView(){
     </div>
   `;
 
-  async function loadOptions(){
-    const empresaSelect = el.querySelector('#r-empresa');
-    const rolSelect = el.querySelector('#r-rol');
+  async function loadOptions() {
+    const empresaSelect = el.querySelector("#r-empresa");
+    const rolSelect = el.querySelector("#r-rol");
 
-    // Cargar empresas
     if (window.AuthController?.getEmpresas) {
       const empresas = await AuthController.getEmpresas();
-      empresas.forEach(e => {
-        const opt = document.createElement('option');
+      empresas.forEach((e) => {
+        const opt = document.createElement("option");
         opt.value = e.id_empresa;
         opt.textContent = e.nombre;
         empresaSelect.appendChild(opt);
       });
     }
 
-    // Cargar roles, filtrando solo admin y vendedor
     if (window.AuthController?.getRoles) {
       const roles = await AuthController.getRoles();
-      const allowedRoles = ['admin', 'vendedor'];
+      const allowedRoles = ["admin", "vendedor"];
       roles
-        .filter(r => allowedRoles.includes(r.nombre_rol.toLowerCase()))
-        .forEach(r => {
-          const opt = document.createElement('option');
+        .filter((r) => allowedRoles.includes(r.nombre_rol.toLowerCase()))
+        .forEach((r) => {
+          const opt = document.createElement("option");
           opt.value = r.id_rol;
           opt.textContent = r.nombre_rol;
           rolSelect.appendChild(opt);
@@ -89,38 +87,43 @@ function RegisterView(){
 
   loadOptions();
 
-  el.querySelector('#btn-register').addEventListener('click', async ()=>{
+  el.querySelector("#btn-register").addEventListener("click", async () => {
     const payload = {
-      nombre: el.querySelector('#r-nombre').value.trim(),
-      usuario: el.querySelector('#r-usuario').value.trim(),
-      email: el.querySelector('#r-email').value.trim(),
-      telefono: el.querySelector('#r-tel').value.trim(),
-      contrasena: el.querySelector('#r-pass').value,
-      id_empresa: el.querySelector('#r-empresa').value,
-      id_rol: el.querySelector('#r-rol').value
+      nombre: el.querySelector("#r-nombre").value.trim(),
+      usuario: el.querySelector("#r-usuario").value.trim(),
+      email: el.querySelector("#r-email").value.trim(),
+      telefono: el.querySelector("#r-tel").value.trim(),
+      contrasena: el.querySelector("#r-pass").value,
+      id_empresa: el.querySelector("#r-empresa").value,
+      id_rol: el.querySelector("#r-rol").value,
     };
 
-    if (Object.values(payload).some(v => !v)) {
-      alert('Completá todos los campos');
+    if (Object.values(payload).some((v) => !v)) {
+      alert("Completá todos los campos");
       return;
     }
 
-    try{
-      if (!window.AuthController || typeof AuthController.register !== 'function') {
-        alert('Demo: AuthController.register no está definido. Redirigiendo a Login…');
-        location.hash = '#/login';
+    try {
+      if (
+        !window.AuthController ||
+        typeof AuthController.register !== "function"
+      ) {
+        alert(
+          "Demo: AuthController.register no está definido. Redirigiendo a Login…"
+        );
+        location.hash = "#/login";
         return;
       }
 
       const res = await AuthController.register(payload);
       if (res.ok) {
-        alert('Usuario creado. Ingresá ahora.');
-        location.hash = '#/login';
+        alert("Usuario creado. Ingresá ahora.");
+        location.hash = "#/login";
       } else {
-        alert(res.msg || 'No se pudo registrar');
+        alert(res.msg || "No se pudo registrar");
       }
-    } catch(e){
-      alert(e.message || 'Error al registrar');
+    } catch (e) {
+      alert(e.message || "Error al registrar");
     }
   });
 
