@@ -1,47 +1,49 @@
-function LoginView(){
-  const el = document.createElement('div');
-  el.className = 'card two';
-  el.innerHTML = `
-    <h2 class="title">Iniciar sesión</h2>
-    <p class="muted">Accedé con tu usuario o email.</p>
-    <div class="grid" style="margin-top:.5rem">
-      <div class="two"><label>Usuario o Email</label><input id="f-user" placeholder="usuario o email" /></div>
-      <div class="two"><label>Contraseña</label><input id="f-pass" type="password" placeholder="••••••••" /></div>
-    </div>
-    <div class="row" style="margin-top:1rem">
-      <button class="primary" id="btn-login">Entrar</button>
-      <a href="#/register" class="muted">¿No tenés cuenta? Crear una</a>
-    </div>
-  `;
+function LoginView() {
+    const container = document.createElement('div');
+    container.className = 'login-wrapper';
 
-  el.querySelector('#btn-login').addEventListener('click', async () => {
-    const usuario_o_email = el.querySelector('#f-user').value.trim();
-    const contrasena = el.querySelector('#f-pass').value;
+    container.innerHTML = `
+        <div class="login-card">
+            <h2 class="login-title">Iniciar sesión</h2>
+            <p class="login-subtitle">Accedé con tu usuario o email.</p>
 
-    if (!usuario_o_email || !contrasena) {
-      alert('Completá usuario y contraseña');
-      return;
-    }
+            <div class="login-grid">
+                <div class="login-field">
+                    <label class="login-label">Usuario o Email</label>
+                    <input id="login-user" class="login-input" placeholder="usuario o email" />
+                </div>
+                <div class="login-field">
+                    <label class="login-label">Contraseña</label>
+                    <input id="login-pass" type="password" class="login-input" placeholder="••••••••" />
+                </div>
+            </div>
 
-    try {
-      if (!window.AuthController || typeof AuthController.login !== 'function') {
-        // Fallback si aún no tenés el controlador
-        alert('Demo: AuthController.login no está definido. Redirigiendo a Productos…');
-        location.hash = '#/productos';
-        return;
-      }
+            <div class="login-actions">
+                <button class="login-btn-primary" id="login-btn">Entrar</button>
+            </div>
+        </div>
+    `;
 
-      const res = await AuthController.login({ usuario_o_email, contrasena });
-      if (res.ok) {
-        alert('¡Bienvenido!');
-        location.hash = '#/productos';
-      } else {
-        alert(res.msg || 'Credenciales inválidas');
-      }
-    } catch (e) {
-      alert(e.message || 'Error al iniciar sesión');
-    }
-  });
+    container.querySelector('#login-btn').addEventListener('click', async () => {
+        const usuario_o_email = container.querySelector('#login-user').value.trim();
+        const contrasena = container.querySelector('#login-pass').value;
 
-  return el;
+        if (!usuario_o_email || !contrasena) return alert('Completá usuario y contraseña');
+
+        if (!window.AuthController?.login) {
+            alert('Demo: AuthController.login no está definido. Redirigiendo a Productos…');
+            location.hash = '#/productos';
+            return;
+        }
+
+        const res = await AuthController.login({ usuario_o_email, contrasena });
+        if (res.ok) {
+            alert('¡Bienvenido!');
+            location.hash = '#/productos';
+        } else {
+            alert(res.msg || 'Credenciales inválidas');
+        }
+    });
+
+    return container;
 }

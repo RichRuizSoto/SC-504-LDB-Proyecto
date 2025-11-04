@@ -1,38 +1,103 @@
 function RegisterView(){
   const el = document.createElement('div');
-  el.className='card two';
+  el.className = 'register-wrapper';
+  
   el.innerHTML = `
-    <h2 class="title">Crear cuenta</h2>
-    <div class="grid" style="margin-top:.5rem">
-      <div class="two"><label>Nombre</label><input id="r-nombre" placeholder="Nombre y apellidos" /></div>
-      <div class="two"><label>Usuario</label><input id="r-usuario" placeholder="usuario" /></div>
-      <div class="two"><label>Email</label><input id="r-email" type="email" placeholder="correo@ejemplo.com" /></div>
-      <div class="two"><label>Teléfono</label><input id="r-tel" placeholder="8888-8888" /></div>
-      <div class="two"><label>Empresa</label><input id="r-empresa" placeholder="Mi Empresa" /></div>
-      <div class="two">
-        <label>Rol</label>
-        <select id="r-rol">
-          <option value="admin">Administrador</option>
-          <option value="vendedor">Vendedor</option>
-        </select>
+    <div class="register-card">
+      <h2 class="register-title">Crear cuenta</h2>
+      
+      <div class="register-grid">
+        <div class="register-field field-nombre">
+          <label class="register-label">Nombre completo</label>
+          <input id="r-nombre" class="register-input" placeholder="Richard Ruiz Soto" />
+        </div>
+
+        <div class="register-field field-usuario">
+          <label class="register-label">Usuario</label>
+          <input id="r-usuario" class="register-input" placeholder="Rich" />
+        </div>
+
+        <div class="register-field field-email">
+          <label class="register-label">Email</label>
+          <input id="r-email" type="email" class="register-input" placeholder="rruiz10437@ufide.ac.cr" />
+        </div>
+
+        <div class="register-field field-telefono">
+          <label class="register-label">Teléfono</label>
+          <input id="r-tel" class="register-input" placeholder="8080-8000" />
+        </div>
+
+        <div class="register-field field-empresa">
+          <label class="register-label">Empresa</label>
+          <select id="r-empresa" class="register-select">
+            <option value="">Seleccionar empresa</option>
+          </select>
+        </div>
+
+        <div class="register-field field-rol">
+          <label class="register-label">Rol</label>
+          <select id="r-rol" class="register-select">
+            <option value="">Seleccionar rol</option>
+            <option value="admin">Administrador</option>
+            <option value="vendedor">Vendedor</option>
+          </select>
+        </div>
+
+
+        <div class="register-field field-pass">
+          <label class="register-label">Contraseña</label>
+          <input id="r-pass" type="password" class="register-input" placeholder="••••••••" />
+        </div>
       </div>
-      <div class="two"><label>Contraseña</label><input id="r-pass" type="password" /></div>
-    </div>
-    <div class="row" style="margin-top:1rem">
-      <button class="primary" id="btn-register">Crear cuenta</button>
-      <a href="#/login" class="muted">¿Ya tenés cuenta? Ingresar</a>
+      
+      <div class="register-actions">
+        <button class="register-btn primary" id="btn-register">Crear cuenta</button>
+        <a href="#/login" class="register-link muted">¿Ya tenés cuenta? Ingresar</a>
+      </div>
     </div>
   `;
 
+  async function loadOptions(){
+    const empresaSelect = el.querySelector('#r-empresa');
+    const rolSelect = el.querySelector('#r-rol');
+
+    // Cargar empresas
+    if (window.AuthController?.getEmpresas) {
+      const empresas = await AuthController.getEmpresas();
+      empresas.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.id_empresa;
+        opt.textContent = e.nombre;
+        empresaSelect.appendChild(opt);
+      });
+    }
+
+    // Cargar roles, filtrando solo admin y vendedor
+    if (window.AuthController?.getRoles) {
+      const roles = await AuthController.getRoles();
+      const allowedRoles = ['admin', 'vendedor'];
+      roles
+        .filter(r => allowedRoles.includes(r.nombre_rol.toLowerCase()))
+        .forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id_rol;
+          opt.textContent = r.nombre_rol;
+          rolSelect.appendChild(opt);
+        });
+    }
+  }
+
+  loadOptions();
+
   el.querySelector('#btn-register').addEventListener('click', async ()=>{
     const payload = {
-      nombre:   el.querySelector('#r-nombre').value.trim(),
-      usuario:  el.querySelector('#r-usuario').value.trim(),
-      email:    el.querySelector('#r-email').value.trim(),
-      contrasena: el.querySelector('#r-pass').value,
+      nombre: el.querySelector('#r-nombre').value.trim(),
+      usuario: el.querySelector('#r-usuario').value.trim(),
+      email: el.querySelector('#r-email').value.trim(),
       telefono: el.querySelector('#r-tel').value.trim(),
-      empresa:  el.querySelector('#r-empresa').value.trim(), // backend resolverá id_empresa
-      rol:      el.querySelector('#r-rol').value            // backend resolverá id_rol
+      contrasena: el.querySelector('#r-pass').value,
+      id_empresa: el.querySelector('#r-empresa').value,
+      id_rol: el.querySelector('#r-rol').value
     };
 
     if (Object.values(payload).some(v => !v)) {

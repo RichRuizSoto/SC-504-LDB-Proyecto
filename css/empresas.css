@@ -1,0 +1,99 @@
+.empresa-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+}
+
+.empresa-card {
+  width: 100%;
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border-radius: 16px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  box-shadow: 0 8px 20px #00000033;
+}
+
+.empresa-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.empresa-grid,
+.usuario-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.empresa-field,
+.usuario-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.empresa-label,
+.usuario-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.empresa-input,
+.usuario-input {
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid #1f2937;
+  background: #0b1220;
+  color: #e5e7eb;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.empresa-input:focus,
+.usuario-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  outline: none;
+}
+
+.empresa-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  align-items: stretch;
+}
+
+.empresa-btn.primary {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #38bdf8, #0284c7);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.empresa-btn.primary:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 640px) {
+  .empresa-card {
+    max-width: 100%;
+  }
+}
