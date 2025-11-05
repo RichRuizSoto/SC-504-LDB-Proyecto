@@ -27,7 +27,7 @@ function EmpresasView() {
           </div>
           <div class="empresa-field">
             <label class="empresa-label">Email</label>
-            <input id="e-email" class="empresa-input" type="email" placeholder="fidélitas@universidad.com" />
+            <input id="e-email" class="empresa-input" type="email" placeholder="empresa@correo.com" />
           </div>
         </div>
       </div>
@@ -37,19 +37,19 @@ function EmpresasView() {
         <div class="usuario-grid">
           <div class="usuario-field">
             <label class="usuario-label">Nombre completo</label>
-            <input id="u-nombre" class="usuario-input" placeholder="Richard Ruiz Soto" />
+            <input id="u-nombre" class="usuario-input" placeholder="Nombre completo" />
           </div>
           <div class="usuario-field">
             <label class="usuario-label">Usuario</label>
-            <input id="u-usuario" class="usuario-input" placeholder="Rich" />
+            <input id="u-usuario" class="usuario-input" placeholder="usuario" />
           </div>
           <div class="usuario-field">
             <label class="usuario-label">Email</label>
-            <input id="r-email" type="email" class="register-input" placeholder="rruiz10437@ufide.ac.cr" />
+            <input id="u-email" type="email" class="usuario-input" placeholder="correo@dominio.com" />
           </div>
           <div class="usuario-field">
             <label class="usuario-label">Teléfono</label>
-            <input id="u-telefono" class="usuario-input" placeholder="8080-8000" />
+            <input id="u-telefono" class="usuario-input" placeholder="8888-8888" />
           </div>
           <div class="usuario-field">
             <label class="usuario-label">Contraseña</label>
@@ -79,10 +79,9 @@ function EmpresasView() {
       email: el.querySelector('#u-email').value.trim(),
       telefono: el.querySelector('#u-telefono').value.trim(),
       contrasena: el.querySelector('#u-pass').value,
-      rol: 'admin' // Asignamos rol admin por defecto
+      rol: 'vendedor' 
     };
 
-    // Validar campos
     if (Object.values(empresaPayload).some(v => !v) || Object.values(usuarioPayload).some(v => !v)) {
       alert('Completá todos los campos de empresa y usuario administrador');
       return;
