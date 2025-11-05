@@ -23,10 +23,7 @@ try {
     oci_bind_by_name($checkStmt, ':email', $usuario['email']);
     oci_execute($checkStmt);
     $row = oci_fetch_assoc($checkStmt);
-    if ($row['CNT'] > 0) {
-        echo json_encode(['ok' => false, 'msg' => 'Usuario o email ya existe']);
-        exit;
-    }
+    if ($row['CNT'] > 0) throw new Exception('Usuario o email ya existe');
 
     $sqlEmpresa = "INSERT INTO empresas (nombre, cedula_juridica, direccion, telefono, email) 
                    VALUES (:nombre, :cedula, :direccion, :telefono, :email) RETURNING id_empresa INTO :id";
@@ -38,7 +35,7 @@ try {
     oci_bind_by_name($stmt, ':email', $empresa['email']);
     $idEmpresa = 0;
     oci_bind_by_name($stmt, ':id', $idEmpresa, 32);
-    if (!oci_execute($stmt, OCI_COMMIT_ON_SUCCESS)) throw new Exception('Error al crear empresa');
+    if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al crear empresa');
 
     $sqlUsuario = "INSERT INTO usuarios (nombre, usuario, email, telefono, contrasena_hash, estado)
                    VALUES (:nombre, :usuario, :email, :telefono, :pass, 1) RETURNING id_usuario INTO :id";
@@ -51,9 +48,9 @@ try {
     oci_bind_by_name($stmt2, ':pass', $hashed);
     $idUsuario = 0;
     oci_bind_by_name($stmt2, ':id', $idUsuario, 32);
-    if (!oci_execute($stmt2, OCI_COMMIT_ON_SUCCESS)) throw new Exception('Error al crear usuario');
+    if (!oci_execute($stmt2, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al crear usuario');
 
-    $stmt3 = oci_parse($conn, "SELECT id_rol FROM roles WHERE nombre_rol='admin'");
+    $stmt3 = oci_parse($conn, "SELECT id_rol FROM roles WHERE nombre_rol='admin' AND estado=1");
     oci_execute($stmt3);
     $rowRol = oci_fetch_assoc($stmt3);
     if (!$rowRol) throw new Exception('Rol admin no encontrado');
@@ -65,9 +62,12 @@ try {
     oci_bind_by_name($stmt4, ':idu', $idUsuario);
     oci_bind_by_name($stmt4, ':ide', $idEmpresa);
     oci_bind_by_name($stmt4, ':idrol', $idRol);
-    if (!oci_execute($stmt4, OCI_COMMIT_ON_SUCCESS)) throw new Exception('Error al asignar rol admin');
+    if (!oci_execute($stmt4, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al asignar rol admin');
 
+    oci_commit($conn);
     echo json_encode(['ok' => true]);
+
 } catch (Exception $e) {
+    oci_rollback($conn);
     echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
 }

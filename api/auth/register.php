@@ -24,8 +24,8 @@ $usuario = $data['usuario'];
 $email = $data['email'];
 $telefono = $data['telefono'] ?? null;
 $contrasena = $data['contrasena'];
-$empresa_nombre = $data['id_empresa']; 
-$rol_nombre = $data['id_rol']; 
+$empresa_nombre = $data['id_empresa'];
+$rol_nombre = $data['id_rol'];
 
 try {
     $stmtCheck = oci_parse($conn, "SELECT COUNT(*) AS CNT FROM usuarios WHERE usuario = :usuario OR email = :email");
@@ -46,18 +46,18 @@ try {
     oci_bind_by_name($stmt, ':telefono', $telefono);
     $idUsuario = 0;
     oci_bind_by_name($stmt, ':id', $idUsuario, 32);
-    if (!oci_execute($stmt, OCI_COMMIT_ON_SUCCESS)) throw new Exception('Error al crear usuario');
+    if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al crear usuario');
 
     $stmtEmp = oci_parse($conn, "SELECT id_empresa FROM empresas WHERE LOWER(nombre) = LOWER(:nombre) AND estado = 1");
     oci_bind_by_name($stmtEmp, ":nombre", $empresa_nombre);
-    oci_execute($stmtEmp);
+    oci_execute($stmtEmp, OCI_NO_AUTO_COMMIT);
     $rowEmp = oci_fetch_assoc($stmtEmp);
     if (!$rowEmp) throw new Exception("Empresa no encontrada");
     $id_empresa_num = $rowEmp['ID_EMPRESA'];
 
     $stmtRol = oci_parse($conn, "SELECT id_rol FROM roles WHERE LOWER(nombre_rol) = LOWER(:nombre) AND estado = 1");
     oci_bind_by_name($stmtRol, ":nombre", $rol_nombre);
-    oci_execute($stmtRol);
+    oci_execute($stmtRol, OCI_NO_AUTO_COMMIT);
     $rowRol = oci_fetch_assoc($stmtRol);
     if (!$rowRol) throw new Exception("Rol no encontrado");
     $id_rol_num = $rowRol['ID_ROL'];
@@ -68,10 +68,12 @@ try {
     oci_bind_by_name($stmt2, ':idu', $idUsuario);
     oci_bind_by_name($stmt2, ':ide', $id_empresa_num);
     oci_bind_by_name($stmt2, ':idr', $id_rol_num);
-    if (!oci_execute($stmt2, OCI_COMMIT_ON_SUCCESS)) throw new Exception('Error al asignar rol/empresa');
+    if (!oci_execute($stmt2, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al asignar rol/empresa');
 
+    oci_commit($conn);
     echo json_encode(['ok' => true]);
 
 } catch (Exception $e) {
+    oci_rollback($conn);
     echo json_encode(['ok' => false, 'msg' => $e->getMessage()]);
 }
