@@ -190,3 +190,30 @@ BEGIN
     VALUES (p_id_usuario, p_id_empresa, p_id_rol, SYSDATE);
 END sp_asignar_usuario_empresa;
 /
+
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE sp_get_empresa_info(
+    p_id_empresa IN NUMBER,
+    p_id_empresa_out OUT NUMBER,
+    p_nombre OUT VARCHAR2,
+    p_cedula OUT VARCHAR2,
+    p_direccion OUT VARCHAR2,
+    p_telefono OUT VARCHAR2,
+    p_email OUT VARCHAR2,
+    p_logo OUT VARCHAR2,
+    p_estado OUT NUMBER,
+    p_fecha OUT DATE
+) AS
+BEGIN
+    SELECT id_empresa, nombre, cedula_juridica, direccion,
+           telefono, email, logo, estado, fecha_creacion
+    INTO p_id_empresa_out, p_nombre, p_cedula, p_direccion,
+         p_telefono, p_email, p_logo, p_estado, p_fecha
+    FROM empresas
+    WHERE id_empresa = p_id_empresa;
+END sp_get_empresa_info;
+/

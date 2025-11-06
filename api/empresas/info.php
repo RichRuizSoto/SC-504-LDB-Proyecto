@@ -10,25 +10,48 @@ if (!$id_empresa) {
 }
 
 try {
-    $sql = "
-        SELECT id_empresa, nombre, cedula_juridica, direccion,
-               telefono, email, logo, estado, fecha_creacion
-        FROM empresas
-        WHERE id_empresa = :id
-    ";
+    $stmt = oci_parse($conn, "
+        BEGIN
+            sp_get_empresa_info(
+                :id_in,
+                :id_out,
+                :nom,
+                :ced,
+                :dir,
+                :tel,
+                :email,
+                :logo,
+                :estado,
+                :fecha
+            );
+        END;
+    ");
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':id', $id_empresa);
-    $stmt->execute();
+    oci_bind_by_name($stmt, ":id_in", $id_empresa);
 
-    $empresa = $stmt->fetch(PDO::FETCH_ASSOC);
+    oci_bind_by_name($stmt, ":id_out", $id_out, 32);
+    oci_bind_by_name($stmt, ":nom", $nombre, 200);
+    oci_bind_by_name($stmt, ":ced", $cedula, 50);
+    oci_bind_by_name($stmt, ":dir", $direccion, 300);
+    oci_bind_by_name($stmt, ":tel", $telefono, 30);
+    oci_bind_by_name($stmt, ":email", $email, 200);
+    oci_bind_by_name($stmt, ":logo", $logo, 500);
+    oci_bind_by_name($stmt, ":estado", $estado, 32);
+    oci_bind_by_name($stmt, ":fecha", $fecha, 32);
 
-    if (!$empresa) {
-        echo json_encode(['error' => 'Empresa no encontrada']);
-        exit;
-    }
+    oci_execute($stmt);
 
-    echo json_encode($empresa);
+    echo json_encode([
+        'id_empresa' => $id_out,
+        'nombre' => $nombre,
+        'cedula_juridica' => $cedula,
+        'direccion' => $direccion,
+        'telefono' => $telefono,
+        'email' => $email,
+        'logo' => $logo,
+        'estado' => $estado,
+        'fecha_creacion' => $fecha
+    ]);
 
 } catch (Exception $e) {
     echo json_encode(['error' => $e->getMessage()]);
