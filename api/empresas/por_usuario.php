@@ -26,7 +26,6 @@ try {
 
     $empresas = [];
     while ($row = oci_fetch_assoc($stmt)) {
-        // Convertir claves a minúsculas para JS
         $empresas[] = array_change_key_case($row, CASE_LOWER);
     }
 

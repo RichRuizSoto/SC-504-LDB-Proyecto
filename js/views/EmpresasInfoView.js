@@ -14,7 +14,6 @@ async function EmpresasInfoView() {
     return root;
   }
 
-  // Cargar empresas del usuario
   let empresas = [];
   try {
     empresas = await ApiEmpresas.getEmpresasPorUsuario(idUsuario);
@@ -27,7 +26,6 @@ async function EmpresasInfoView() {
     return root;
   }
 
-  // Sin empresas
   if (!empresas.length) {
     root.innerHTML = `
       <div class="empinfo-message">
@@ -38,13 +36,11 @@ async function EmpresasInfoView() {
     return root;
   }
 
-  // Solo 1 empresa → mostrar perfil directo
   if (empresas.length === 1) {
     root.appendChild(renderEmpinfoPerfil(empresas[0]));
     return root;
   }
 
-  // Varias empresas → lista
   root.innerHTML = `
     <h2 class="empinfo-heading">Mis Empresas</h2>
     <div class="empinfo-list"></div>
@@ -75,7 +71,6 @@ async function EmpresasInfoView() {
   return root;
 }
 
-// ✅ Tarjeta de empresa con clases exclusivas
 function renderEmpinfoPerfil(empresa) {
   const el = document.createElement("div");
   el.className = "empinfo-card";

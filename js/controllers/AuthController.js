@@ -9,7 +9,6 @@ class AuthController {
 
             const data = await res.json();
 
-            // ✅ Si login es correcto → guardar sesión
             if (data.ok) {
                 localStorage.setItem("id_usuario", data.id_usuario);
                 localStorage.setItem("usuario", data.usuario);

@@ -38,7 +38,6 @@ function LoginView() {
             return;
         }
 
-        // ✅ GUARDAR SESIÓN — ESTO FALTABA
         localStorage.setItem("id_usuario", res.id_usuario);
         localStorage.setItem("usuario", res.usuario);
         localStorage.setItem("email", res.email);
