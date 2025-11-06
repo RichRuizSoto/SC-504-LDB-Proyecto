@@ -3,7 +3,6 @@ require_once '../../db_connect.php';
 header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents('php://input'), true);
-
 $id_usuario = $data['id_usuario'] ?? null;
 
 if (!$id_usuario) {
@@ -12,20 +11,22 @@ if (!$id_usuario) {
 }
 
 try {
-    $sql = "
-        SELECT e.id_empresa, e.nombre, e.cedula_juridica, e.direccion, 
-               e.telefono, e.email, e.logo
-        FROM empresas e
-        JOIN usuarios_empresas ue ON e.id_empresa = ue.id_empresa
-        WHERE ue.id_usuario = :id_usuario
-    ";
+    $stmt = oci_parse($conn, "
+        BEGIN
+            sp_get_empresas_por_usuario(:id_usr, :cur);
+        END;
+    ");
 
-    $stmt = oci_parse($conn, $sql);
-    oci_bind_by_name($stmt, ':id_usuario', $id_usuario);
+    oci_bind_by_name($stmt, ":id_usr", $id_usuario);
+
+    $cursor = oci_new_cursor($conn);
+    oci_bind_by_name($stmt, ":cur", $cursor, -1, OCI_B_CURSOR);
+
     oci_execute($stmt);
+    oci_execute($cursor);
 
     $empresas = [];
-    while ($row = oci_fetch_assoc($stmt)) {
+    while ($row = oci_fetch_assoc($cursor)) {
         $empresas[] = array_change_key_case($row, CASE_LOWER);
     }
 
