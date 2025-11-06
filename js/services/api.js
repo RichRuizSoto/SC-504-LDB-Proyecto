@@ -16,13 +16,8 @@ const API = {
   }
 };
 
-async function getEmpresasPorUsuario(idUsuario) {
-  return API.post('/empresas/por_usuario.php', { id_usuario: idUsuario });
-}
-
-async function getEmpresaInfo(idEmpresa) {
-  return API.get(`/empresas/info.php?id_empresa=${idEmpresa}`);
-}
+async function getEmpresasPorUsuario(idUsuario) { return API.post('/empresas/por_usuario.php', { id_usuario: idUsuario }); }
+async function getEmpresaInfo(idEmpresa) { return API.get(`/empresas/info.php?id_empresa=${idEmpresa}`); }
 
 window.ApiEmpresas = {
   getEmpresasPorUsuario,
