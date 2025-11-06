@@ -129,7 +129,6 @@ VALUES ('vendedor', 'Rol para usuarios que realizan ventas', 1, SYSDATE);
 
 
 
--- Cuatro SP
 CREATE OR REPLACE PROCEDURE sp_crear_empresa (
     p_nombre            IN empresas.nombre%TYPE,
     p_cedula_juridica   IN empresas.cedula_juridica%TYPE,
@@ -213,5 +212,27 @@ BEGIN
         FROM empresas e
         JOIN usuarios_empresas ue ON e.id_empresa = ue.id_empresa
         WHERE ue.id_usuario = p_id_usuario;
+END;
+/
+
+
+
+CREATE OR REPLACE PROCEDURE sp_get_usuarios_de_empresa(
+    p_id_empresa IN NUMBER,
+    p_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT 
+            u.id_usuario,
+            u.nombre,
+            u.usuario,
+            u.email,
+            r.nombre_rol
+        FROM usuarios u
+        JOIN usuarios_empresas ue ON u.id_usuario = ue.id_usuario
+        JOIN roles r ON ue.id_rol = r.id_rol
+        WHERE ue.id_empresa = p_id_empresa;
 END;
 /
