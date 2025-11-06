@@ -28,21 +28,24 @@ function LoginView() {
         const usuario_o_email = container.querySelector('#login-user').value.trim();
         const contrasena = container.querySelector('#login-pass').value;
 
-        if (!usuario_o_email || !contrasena) return alert('Completá usuario y contraseña');
+        if (!usuario_o_email || !contrasena)
+            return alert('Completá usuario y contraseña');
 
-        if (!window.AuthController?.login) {
-            alert('Demo: AuthController.login no está definido. Redirigiendo a Productos…');
-            location.hash = '#/productos';
+        const res = await AuthController.login({ usuario_o_email, contrasena });
+
+        if (!res.ok) {
+            alert(res.msg || 'Credenciales inválidas');
             return;
         }
 
-        const res = await AuthController.login({ usuario_o_email, contrasena });
-        if (res.ok) {
-            alert('¡Bienvenido!');
-            location.hash = '#/productos';
-        } else {
-            alert(res.msg || 'Credenciales inválidas');
-        }
+        // ✅ GUARDAR SESIÓN — ESTO FALTABA
+        localStorage.setItem("id_usuario", res.id_usuario);
+        localStorage.setItem("usuario", res.usuario);
+        localStorage.setItem("email", res.email);
+        localStorage.setItem("nombre", res.nombre);
+
+        alert('¡Bienvenido!');
+        location.hash = '#/mis-empresas';
     });
 
     return container;

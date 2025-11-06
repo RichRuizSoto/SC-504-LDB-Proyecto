@@ -6,30 +6,40 @@
       typeof LoginView === "function"
         ? LoginView
         : () => document.createTextNode("LoginView no definida"),
+
     "#/register":
       typeof RegisterView === "function"
         ? RegisterView
         : () => document.createTextNode("RegisterView no definida"),
+
     "#/productos":
       typeof ProductosView === "function"
         ? ProductosView
         : () => document.createTextNode("ProductosView no definida"),
+
     "#/empresas":
       typeof EmpresasView === "function"
         ? EmpresasView
         : () => document.createTextNode("EmpresasView no definida"),
+
+    "#/mis-empresas":
+      typeof EmpresasInfoView === "function"
+        ? EmpresasInfoView
+        : () => document.createTextNode("EmpresasInfoView no definida"),
   };
 
-  function render(viewFn) {
+  async function render(viewFn) {
     const root = document.getElementById("view-root");
     while (root.firstChild) root.removeChild(root.firstChild);
-    root.appendChild(viewFn());
+
+    const view = await viewFn();  // ✅ Esperar la vista async
+    root.appendChild(view);
   }
 
-  function router() {
+  async function router() {
     const hash = location.hash || "#/login";
     const viewFn = routes[hash] || routes["#/login"];
-    render(viewFn);
+    await render(viewFn); // ✅ Router también async
   }
 
   window.addEventListener("hashchange", router);

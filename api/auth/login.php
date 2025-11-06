@@ -16,6 +16,7 @@ try {
     $sql = "SELECT id_usuario, nombre, usuario, email, contrasena_hash 
             FROM usuarios 
             WHERE usuario = :ue OR email = :ue";
+
     $stmt = oci_parse($conn, $sql);
     oci_bind_by_name($stmt, ':ue', $usuario_o_email);
     oci_execute($stmt);
@@ -36,14 +37,13 @@ try {
     oci_bind_by_name($update, ':id', $row['ID_USUARIO']);
     oci_execute($update, OCI_COMMIT_ON_SUCCESS);
 
+    // ✅ RESPUESTA CORREGIDA (SIN ANIDAR)
     echo json_encode([
-        'ok' => true,
-        'usuario' => [
-            'id_usuario' => $row['ID_USUARIO'],
-            'nombre' => $row['NOMBRE'],
-            'usuario' => $row['USUARIO'],
-            'email' => $row['EMAIL']
-        ]
+        'ok'         => true,
+        'id_usuario' => $row['ID_USUARIO'],
+        'nombre'     => $row['NOMBRE'],
+        'usuario'    => $row['USUARIO'],
+        'email'      => $row['EMAIL']
     ]);
 
 } catch (Exception $e) {

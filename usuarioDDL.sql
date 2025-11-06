@@ -124,3 +124,296 @@ VALUES ('admin', 'Rol con permisos de administrador', 1, SYSDATE);
 
 INSERT INTO roles (nombre_rol, descripcion, estado, fecha_creacion)
 VALUES ('vendedor', 'Rol para usuarios que realizan ventas', 1, SYSDATE);
+
+
+
+
+
+
+
+
+
+
+
+-- 1. Crear usuario
+CREATE OR REPLACE PROCEDURE sp_crear_usuario (
+    p_nombre IN VARCHAR2,
+    p_usuario IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_pass IN VARCHAR2,
+    p_telefono IN VARCHAR2,
+    p_id_usuario OUT NUMBER
+) AS
+BEGIN
+    INSERT INTO usuarios (nombre, usuario, email, contrasena_hash, telefono, estado)
+    VALUES (p_nombre, p_usuario, p_email, p_pass, p_telefono, 1)
+    RETURNING id_usuario INTO p_id_usuario;
+END;
+/
+
+-- 2. Validar usuario
+CREATE OR REPLACE PROCEDURE sp_validar_usuario (
+    p_usuario IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_count OUT NUMBER
+) AS
+BEGIN
+    SELECT COUNT(*) INTO p_count FROM usuarios
+    WHERE usuario = p_usuario OR email = p_email;
+END;
+/
+
+-- 3. Asignar rol a usuario y empresa
+CREATE OR REPLACE PROCEDURE sp_asignar_rol_empresa (
+    p_id_usuario IN NUMBER,
+    p_id_empresa IN NUMBER,
+    p_id_rol IN NUMBER
+) AS
+BEGIN
+    INSERT INTO usuarios_empresas (id_usuario, id_empresa, id_rol, fecha_asignacion)
+    VALUES (p_id_usuario, p_id_empresa, p_id_rol, SYSDATE);
+END;
+/
+
+-- 4. Registrar empresa
+CREATE OR REPLACE PROCEDURE sp_registrar_empresa (
+    p_nombre IN VARCHAR2,
+    p_cedula IN VARCHAR2,
+    p_direccion IN VARCHAR2,
+    p_telefono IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_id_empresa OUT NUMBER
+) AS
+BEGIN
+    INSERT INTO empresas (nombre, cedula_juridica, direccion, telefono, email)
+    VALUES (p_nombre, p_cedula, p_direccion, p_telefono, p_email)
+    RETURNING id_empresa INTO p_id_empresa;
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 1. Obtener ID de usuario por email
+CREATE OR REPLACE FUNCTION fn_get_usuario_email(p_email VARCHAR2) RETURN NUMBER AS
+    v_id NUMBER;
+BEGIN
+    SELECT id_usuario INTO v_id FROM usuarios WHERE email = p_email;
+    RETURN v_id;
+END;
+/
+
+-- 2. Verificar si rol está activo
+CREATE OR REPLACE FUNCTION fn_rol_activo(p_id_rol NUMBER) RETURN NUMBER AS
+    v_estado NUMBER;
+BEGIN
+    SELECT estado INTO v_estado FROM roles WHERE id_rol = p_id_rol;
+    RETURN v_estado;
+END;
+/
+
+-- 3. Verificar si empresa está activa
+CREATE OR REPLACE FUNCTION fn_empresa_activa(p_id_empresa NUMBER) RETURN NUMBER AS
+    v_estado NUMBER;
+BEGIN
+    SELECT estado INTO v_estado FROM empresas WHERE id_empresa = p_id_empresa;
+    RETURN v_estado;
+END;
+/
+
+-- 4. Hash de contraseña (opcional)
+CREATE OR REPLACE FUNCTION fn_hash_password(p_pass VARCHAR2) RETURN VARCHAR2 AS
+BEGIN
+    RETURN DBMS_CRYPTO.HASH(UTL_RAW.CAST_TO_RAW(p_pass), DBMS_CRYPTO.HASH_SH1);
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 1. Usuarios activos
+CREATE OR REPLACE VIEW vw_usuarios_activos AS
+SELECT id_usuario, nombre, usuario, email
+FROM usuarios
+WHERE estado = 1;
+/
+
+-- 2. Roles por usuario
+CREATE OR REPLACE VIEW vw_roles_por_usuario AS
+SELECT ue.id_usuario, u.usuario, r.nombre_rol
+FROM usuarios_empresas ue
+JOIN usuarios u ON ue.id_usuario = u.id_usuario
+JOIN roles r ON ue.id_rol = r.id_rol;
+/
+
+-- 3. Empresas con usuarios
+CREATE OR REPLACE VIEW vw_empresas_con_usuarios AS
+SELECT e.id_empresa, e.nombre, COUNT(ue.id_usuario) AS total_usuarios
+FROM empresas e
+LEFT JOIN usuarios_empresas ue ON e.id_empresa = ue.id_empresa
+GROUP BY e.id_empresa, e.nombre;
+/
+
+-- 4. Usuarios sin rol
+CREATE OR REPLACE VIEW vw_usuarios_sin_rol AS
+SELECT u.id_usuario, u.usuario
+FROM usuarios u
+LEFT JOIN usuarios_empresas ue ON u.id_usuario = ue.id_usuario
+WHERE ue.id_usuario IS NULL;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 1. Antes de insertar usuario: validar email único
+CREATE OR REPLACE TRIGGER trg_before_insert_usuario
+BEFORE INSERT ON usuarios
+FOR EACH ROW
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM usuarios WHERE email = :NEW.email;
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Email ya existe');
+    END IF;
+END;
+/
+
+-- 2. Después de eliminar empresa: log
+CREATE OR REPLACE TRIGGER trg_after_delete_empresa
+AFTER DELETE ON empresas
+FOR EACH ROW
+BEGIN
+    INSERT INTO log_empresas (id_empresa, accion, fecha)
+    VALUES (:OLD.id_empresa, 'ELIMINADO', SYSDATE);
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 1. Cursor usuarios activos
+DECLARE
+    CURSOR cur_usuarios_activos IS
+        SELECT id_usuario, nombre, usuario FROM usuarios WHERE estado = 1;
+    v_usuario cur_usuarios_activos%ROWTYPE;
+BEGIN
+    OPEN cur_usuarios_activos;
+    LOOP
+        FETCH cur_usuarios_activos INTO v_usuario;
+        EXIT WHEN cur_usuarios_activos%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_usuario.usuario);
+    END LOOP;
+    CLOSE cur_usuarios_activos;
+END;
+/
+
+-- 2. Cursor roles activos
+DECLARE
+    CURSOR cur_roles IS SELECT id_rol, nombre_rol FROM roles WHERE estado = 1;
+    v_rol cur_roles%ROWTYPE;
+BEGIN
+    OPEN cur_roles;
+    LOOP
+        FETCH cur_roles INTO v_rol;
+        EXIT WHEN cur_roles%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_rol.nombre_rol);
+    END LOOP;
+    CLOSE cur_roles;
+END;
+/
+
+-- 3. Cursor empresas activas
+DECLARE
+    CURSOR cur_empresas IS SELECT id_empresa, nombre FROM empresas WHERE estado = 1;
+    v_empresa cur_empresas%ROWTYPE;
+BEGIN
+    OPEN cur_empresas;
+    LOOP
+        FETCH cur_empresas INTO v_empresa;
+        EXIT WHEN cur_empresas%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_empresa.nombre);
+    END LOOP;
+    CLOSE cur_empresas;
+END;
+/
+
+-- 4. Cursor usuarios sin rol
+DECLARE
+    CURSOR cur_usuarios_sin_rol IS
+        SELECT u.id_usuario, u.usuario
+        FROM usuarios u
+        LEFT JOIN usuarios_empresas ue ON u.id_usuario = ue.id_usuario
+        WHERE ue.id_usuario IS NULL;
+    v_user cur_usuarios_sin_rol%ROWTYPE;
+BEGIN
+    OPEN cur_usuarios_sin_rol;
+    LOOP
+        FETCH cur_usuarios_sin_rol INTO v_user;
+        EXIT WHEN cur_usuarios_sin_rol%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_user.usuario);
+    END LOOP;
+    CLOSE cur_usuarios_sin_rol;
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

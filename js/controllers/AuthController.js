@@ -6,7 +6,18 @@ class AuthController {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ usuario_o_email, contrasena })
             });
-            return await res.json();
+
+            const data = await res.json();
+
+            // ✅ Si login es correcto → guardar sesión
+            if (data.ok) {
+                localStorage.setItem("id_usuario", data.id_usuario);
+                localStorage.setItem("usuario", data.usuario);
+                localStorage.setItem("email", data.email);
+                localStorage.setItem("nombre", data.nombre);
+            }
+
+            return data;
         } catch (e) {
             return { ok: false, msg: e.message };
         }
