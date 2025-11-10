@@ -42,7 +42,7 @@ async function EmpresasInfoView() {
   }
 
   root.innerHTML = `
-    <h2 class="empinfo-heading">Mis Empresas</h2>
+    <h2 class="empinfo-heading">Info Empresa</h2>
     <div class="empinfo-list"></div>
   `;
 

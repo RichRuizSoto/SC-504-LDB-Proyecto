@@ -22,7 +22,7 @@
         ? EmpresasView
         : () => document.createTextNode("EmpresasView no definida"),
 
-    "#/mis-empresas":
+    "#/info-empresa":
       typeof EmpresasInfoView === "function"
         ? EmpresasInfoView
         : () => document.createTextNode("EmpresasInfoView no definida"),
@@ -32,14 +32,14 @@
     const root = document.getElementById("view-root");
     while (root.firstChild) root.removeChild(root.firstChild);
 
-    const view = await viewFn();  // ✅ Esperar la vista async
+    const view = await viewFn(); 
     root.appendChild(view);
   }
 
   async function router() {
     const hash = location.hash || "#/login";
     const viewFn = routes[hash] || routes["#/login"];
-    await render(viewFn); // ✅ Router también async
+    await render(viewFn); 
   }
 
   window.addEventListener("hashchange", router);

@@ -44,7 +44,7 @@ function LoginView() {
         localStorage.setItem("nombre", res.nombre);
 
         alert('¡Bienvenido!');
-        location.hash = '#/mis-empresas';
+        location.hash = '#/info-empresa';
     });
 
     return container;
