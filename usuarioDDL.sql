@@ -282,3 +282,97 @@ BEGIN
 END SP_UPDATE_ACCESO;
 /
 
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE SP_CHECK_USUARIO(
+    p_usuario IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_existe OUT NUMBER
+) AS
+BEGIN
+    SELECT COUNT(*)
+    INTO p_existe
+    FROM usuarios
+    WHERE usuario = p_usuario OR email = p_email;
+END SP_CHECK_USUARIO;
+/
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE SP_INSERT_USUARIO(
+    p_nombre IN VARCHAR2,
+    p_usuario IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_contrasena_hash IN VARCHAR2,
+    p_telefono IN VARCHAR2,
+    p_id_usuario OUT NUMBER
+) AS
+BEGIN
+    INSERT INTO usuarios (nombre, usuario, email, contrasena_hash, telefono, estado)
+    VALUES (p_nombre, p_usuario, p_email, p_contrasena_hash, p_telefono, 1)
+    RETURNING id_usuario INTO p_id_usuario;
+END SP_INSERT_USUARIO;
+/
+
+
+
+CREATE OR REPLACE PROCEDURE SP_GET_EMPRESA(
+    p_nombre IN VARCHAR2,
+    p_id_empresa OUT NUMBER,
+    p_encontrada OUT NUMBER
+) AS
+BEGIN
+    p_encontrada := 0;
+    SELECT id_empresa
+    INTO p_id_empresa
+    FROM empresas
+    WHERE LOWER(nombre) = LOWER(p_nombre) AND estado = 1;
+    p_encontrada := 1;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_encontrada := 0;
+END SP_GET_EMPRESA;
+/
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE SP_GET_ROL(
+    p_nombre_rol IN VARCHAR2,
+    p_id_rol OUT NUMBER,
+    p_encontrado OUT NUMBER
+) AS
+BEGIN
+    p_encontrado := 0;
+    SELECT id_rol
+    INTO p_id_rol
+    FROM roles
+    WHERE LOWER(nombre_rol) = LOWER(p_nombre_rol) AND estado = 1;
+    p_encontrado := 1;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_encontrado := 0;
+END SP_GET_ROL;
+/
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE SP_ASIGNAR_USUARIO_EMPRESA(
+    p_id_usuario IN NUMBER,
+    p_id_empresa IN NUMBER,
+    p_id_rol IN NUMBER
+) AS
+BEGIN
+    INSERT INTO usuarios_empresas (id_usuario, id_empresa, id_rol, fecha_asignacion)
+    VALUES (p_id_usuario, p_id_empresa, p_id_rol, SYSDATE);
+END SP_ASIGNAR_USUARIO_EMPRESA;
+/
+
