@@ -28,47 +28,46 @@ $empresa_nombre = $data['id_empresa'];
 $rol_nombre = $data['id_rol'];
 
 try {
-    $stmtCheck = oci_parse($conn, "SELECT COUNT(*) AS CNT FROM usuarios WHERE usuario = :usuario OR email = :email");
-    oci_bind_by_name($stmtCheck, ":usuario", $usuario);
-    oci_bind_by_name($stmtCheck, ":email", $email);
+    $stmtCheck = oci_parse($conn, "BEGIN SP_CHECK_USUARIO(:usuario, :email, :existe); END;");
+    oci_bind_by_name($stmtCheck, ':usuario', $usuario);
+    oci_bind_by_name($stmtCheck, ':email', $email);
+    oci_bind_by_name($stmtCheck, ':existe', $existe, 1);
     oci_execute($stmtCheck);
-    $rowCheck = oci_fetch_assoc($stmtCheck);
-    if ($rowCheck['CNT'] > 0) throw new Exception("Usuario o email ya existe");
 
-    $sqlUser = "INSERT INTO usuarios (nombre, usuario, email, contrasena_hash, telefono, estado) 
-                VALUES (:nombre, :usuario, :email, :pass, :telefono, 1) RETURNING id_usuario INTO :id";
-    $stmt = oci_parse($conn, $sqlUser);
-    oci_bind_by_name($stmt, ':nombre', $nombre);
-    oci_bind_by_name($stmt, ':usuario', $usuario);
-    oci_bind_by_name($stmt, ':email', $email);
+    if ($existe > 0) throw new Exception("Usuario o email ya existe");
+
     $hashed = password_hash($contrasena, PASSWORD_DEFAULT);
-    oci_bind_by_name($stmt, ':pass', $hashed);
-    oci_bind_by_name($stmt, ':telefono', $telefono);
+    $stmtInsert = oci_parse($conn, "BEGIN SP_INSERT_USUARIO(:nombre, :usuario, :email, :pass, :telefono, :id_usuario); END;");
+    oci_bind_by_name($stmtInsert, ':nombre', $nombre);
+    oci_bind_by_name($stmtInsert, ':usuario', $usuario);
+    oci_bind_by_name($stmtInsert, ':email', $email);
+    oci_bind_by_name($stmtInsert, ':pass', $hashed);
+    oci_bind_by_name($stmtInsert, ':telefono', $telefono);
     $idUsuario = 0;
-    oci_bind_by_name($stmt, ':id', $idUsuario, 32);
-    if (!oci_execute($stmt, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al crear usuario');
+    oci_bind_by_name($stmtInsert, ':id_usuario', $idUsuario, 32);
+    oci_execute($stmtInsert, OCI_NO_AUTO_COMMIT);
 
-    $stmtEmp = oci_parse($conn, "SELECT id_empresa FROM empresas WHERE LOWER(nombre) = LOWER(:nombre) AND estado = 1");
-    oci_bind_by_name($stmtEmp, ":nombre", $empresa_nombre);
+    $stmtEmp = oci_parse($conn, "BEGIN SP_GET_EMPRESA(:nombre, :id_empresa, :encontrada); END;");
+    oci_bind_by_name($stmtEmp, ':nombre', $empresa_nombre);
+    oci_bind_by_name($stmtEmp, ':id_empresa', $idEmpresa, 32);
+    oci_bind_by_name($stmtEmp, ':encontrada', $empresaEncontrada, 1);
     oci_execute($stmtEmp, OCI_NO_AUTO_COMMIT);
-    $rowEmp = oci_fetch_assoc($stmtEmp);
-    if (!$rowEmp) throw new Exception("Empresa no encontrada");
-    $id_empresa_num = $rowEmp['ID_EMPRESA'];
 
-    $stmtRol = oci_parse($conn, "SELECT id_rol FROM roles WHERE LOWER(nombre_rol) = LOWER(:nombre) AND estado = 1");
-    oci_bind_by_name($stmtRol, ":nombre", $rol_nombre);
+    if ($empresaEncontrada != 1) throw new Exception("Empresa no encontrada");
+
+    $stmtRol = oci_parse($conn, "BEGIN SP_GET_ROL(:nombre_rol, :id_rol, :encontrado); END;");
+    oci_bind_by_name($stmtRol, ':nombre_rol', $rol_nombre);
+    oci_bind_by_name($stmtRol, ':id_rol', $idRol, 32);
+    oci_bind_by_name($stmtRol, ':encontrado', $rolEncontrado, 1);
     oci_execute($stmtRol, OCI_NO_AUTO_COMMIT);
-    $rowRol = oci_fetch_assoc($stmtRol);
-    if (!$rowRol) throw new Exception("Rol no encontrado");
-    $id_rol_num = $rowRol['ID_ROL'];
 
-    $sqlUE = "INSERT INTO usuarios_empresas (id_usuario, id_empresa, id_rol, fecha_asignacion)
-              VALUES (:idu, :ide, :idr, SYSDATE)";
-    $stmt2 = oci_parse($conn, $sqlUE);
-    oci_bind_by_name($stmt2, ':idu', $idUsuario);
-    oci_bind_by_name($stmt2, ':ide', $id_empresa_num);
-    oci_bind_by_name($stmt2, ':idr', $id_rol_num);
-    if (!oci_execute($stmt2, OCI_NO_AUTO_COMMIT)) throw new Exception('Error al asignar rol/empresa');
+    if ($rolEncontrado != 1) throw new Exception("Rol no encontrado");
+
+    $stmtUE = oci_parse($conn, "BEGIN SP_ASIGNAR_USUARIO_EMPRESA(:idu, :ide, :idr); END;");
+    oci_bind_by_name($stmtUE, ':idu', $idUsuario);
+    oci_bind_by_name($stmtUE, ':ide', $idEmpresa);
+    oci_bind_by_name($stmtUE, ':idr', $idRol);
+    oci_execute($stmtUE, OCI_NO_AUTO_COMMIT);
 
     oci_commit($conn);
     echo json_encode(['ok' => true]);
