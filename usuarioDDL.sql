@@ -236,3 +236,49 @@ BEGIN
         WHERE ue.id_empresa = p_id_empresa;
 END;
 /
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE SP_GET_USUARIO(
+    p_usuario_o_email IN VARCHAR2,
+    p_id_usuario OUT NUMBER,
+    p_nombre OUT VARCHAR2,
+    p_usuario OUT VARCHAR2,
+    p_email OUT VARCHAR2,
+    p_contrasena_hash OUT VARCHAR2,
+    p_encontrado OUT NUMBER
+) AS
+BEGIN
+    p_encontrado := 0;
+
+    SELECT id_usuario, nombre, usuario, email, contrasena_hash
+    INTO p_id_usuario, p_nombre, p_usuario, p_email, p_contrasena_hash
+    FROM usuarios
+    WHERE usuario = p_usuario_o_email OR email = p_usuario_o_email;
+
+    p_encontrado := 1;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_encontrado := 0;
+    WHEN TOO_MANY_ROWS THEN
+        p_encontrado := -1;
+END SP_GET_USUARIO;
+/
+
+
+
+CREATE OR REPLACE PROCEDURE SP_UPDATE_ACCESO(
+    p_id_usuario IN NUMBER
+) AS
+BEGIN
+    UPDATE usuarios
+    SET fecha_ultimo_acceso = SYSDATE
+    WHERE id_usuario = p_id_usuario;
+
+    COMMIT;
+END SP_UPDATE_ACCESO;
+/
+

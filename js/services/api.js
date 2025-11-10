@@ -1,5 +1,6 @@
 const API = {
   base: '/api',
+  
   async post(path, data) {
     const res = await fetch(`${this.base}${path}`, {
       method: 'POST',
@@ -9,6 +10,7 @@ const API = {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   },
+
   async get(path) {
     const res = await fetch(`${this.base}${path}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -13,37 +13,36 @@ $usuario_o_email = $data['usuario_o_email'];
 $contrasena = $data['contrasena'];
 
 try {
-    $sql = "SELECT id_usuario, nombre, usuario, email, contrasena_hash 
-            FROM usuarios 
-            WHERE usuario = :ue OR email = :ue";
+    $stid = oci_parse($conn, "BEGIN SP_GET_USUARIO(:p_ue, :p_id, :p_nombre, :p_usuario, :p_email, :p_hash, :p_encontrado); END;");
+    oci_bind_by_name($stid, ':p_ue', $usuario_o_email);
+    oci_bind_by_name($stid, ':p_id', $id_usuario, 32);
+    oci_bind_by_name($stid, ':p_nombre', $nombre, 100);
+    oci_bind_by_name($stid, ':p_usuario', $usuario, 100);
+    oci_bind_by_name($stid, ':p_email', $email, 100);
+    oci_bind_by_name($stid, ':p_hash', $contrasena_hash, 200);
+    oci_bind_by_name($stid, ':p_encontrado', $encontrado, 1);
+    oci_execute($stid);
 
-    $stmt = oci_parse($conn, $sql);
-    oci_bind_by_name($stmt, ':ue', $usuario_o_email);
-    oci_execute($stmt);
-
-    $row = oci_fetch_assoc($stmt);
-
-    if (!$row) {
+    if ($encontrado != 1) {
         echo json_encode(['ok' => false, 'msg' => 'Usuario o email no encontrado']);
         exit;
     }
 
-    if (!password_verify($contrasena, $row['CONTRASENA_HASH'])) {
+    if (!password_verify($contrasena, $contrasena_hash)) {
         echo json_encode(['ok' => false, 'msg' => 'Contraseña incorrecta']);
         exit;
     }
 
-    $update = oci_parse($conn, "UPDATE usuarios SET fecha_ultimo_acceso = SYSDATE WHERE id_usuario = :id");
-    oci_bind_by_name($update, ':id', $row['ID_USUARIO']);
-    oci_execute($update, OCI_COMMIT_ON_SUCCESS);
+    $upd = oci_parse($conn, "BEGIN SP_UPDATE_ACCESO(:p_id); END;");
+    oci_bind_by_name($upd, ':p_id', $id_usuario);
+    oci_execute($upd);
 
-    // ✅ RESPUESTA CORREGIDA (SIN ANIDAR)
     echo json_encode([
-        'ok'         => true,
-        'id_usuario' => $row['ID_USUARIO'],
-        'nombre'     => $row['NOMBRE'],
-        'usuario'    => $row['USUARIO'],
-        'email'      => $row['EMAIL']
+        'ok' => true,
+        'id_usuario' => $id_usuario,
+        'nombre' => $nombre,
+        'usuario' => $usuario,
+        'email' => $email
     ]);
 
 } catch (Exception $e) {
