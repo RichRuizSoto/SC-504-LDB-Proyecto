@@ -54,7 +54,7 @@ function RegisterView() {
     };
 
     if (Object.values(payload).some(v => !v)) {
-      alert("Completá todos los campos");
+      toast("Completá todos los campos");
       return;
     }
 
@@ -66,13 +66,13 @@ function RegisterView() {
 
       const res = await AuthController.register(payload);
       if (res.ok) {
-        alert("Usuario creado. Ingresá ahora.");
+        toast("Usuario creado. Ingresá ahora.");
         location.hash = "#/login";
       } else {
-        alert(res.msg || "No se pudo registrar");
+        toast(res.msg || "No se pudo registrar");
       }
     } catch (e) {
-      alert(e.message || "Error al registrar");
+      toast(e.message || "Error al registrar");
     }
   });
 

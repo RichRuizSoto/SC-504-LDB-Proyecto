@@ -29,12 +29,12 @@ function LoginView() {
         const contrasena = container.querySelector('#login-pass').value;
 
         if (!usuario_o_email || !contrasena)
-            return alert('Completá usuario y contraseña');
+            return toast('Completá usuario y contraseña');
 
         const res = await AuthController.login({ usuario_o_email, contrasena });
 
         if (!res.ok) {
-            alert(res.msg || 'Credenciales inválidas');
+            toast(res.msg || 'Credenciales inválidas');
             return;
         }
 
@@ -43,7 +43,7 @@ function LoginView() {
         localStorage.setItem("email", res.email);
         localStorage.setItem("nombre", res.nombre);
 
-        alert('¡Bienvenido!');
+        toast('¡Bienvenido!');
         location.hash = '#/info-empresa';
     });
 

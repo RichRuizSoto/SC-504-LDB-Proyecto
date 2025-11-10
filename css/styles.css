@@ -161,26 +161,21 @@ button.primary {
 }
 
 .toast {
-    position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-    background: #0b1220;
-    border: 1px solid #1f2937;
-    padding: 0.75rem 1rem;
-    border-radius: 12px;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: 0.25s;
+  position: fixed;
+  bottom: 20px;
+  background: #333;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  font-family: sans-serif;
 }
 
 .toast.show {
-    opacity: 1;
-    transform: translateY(0);
+  display: flex;
+  animation: fade 0.3s ease;
 }
 
-.hidden {
-    display: none !important;
-}
+

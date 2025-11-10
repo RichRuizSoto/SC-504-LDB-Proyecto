@@ -1,5 +1,5 @@
 (function () {
-  const $ = (s, r = document) => r.querySelector(s);
+  // const $ = (s, r = document) => r.querySelector(s);
 
   const safeView = (viewName, fallbackText) =>
     typeof viewName === "function"

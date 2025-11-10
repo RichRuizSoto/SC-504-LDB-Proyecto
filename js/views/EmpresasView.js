@@ -83,26 +83,26 @@ function EmpresasView() {
     };
 
     if (Object.values(empresaPayload).some(v => !v) || Object.values(usuarioPayload).some(v => !v)) {
-      alert('Completá todos los campos de empresa y usuario administrador');
+      toast('Completá todos los campos de empresa y usuario administrador');
       return;
     }
 
     try {
       if (!window.EmpresaController?.createEmpresaWithAdmin) {
-        alert('Demo: La función createEmpresaWithAdmin no está definida');
+        toast('Demo: La función createEmpresaWithAdmin no está definida');
         return;
       }
 
       const res = await EmpresaController.createEmpresaWithAdmin({ empresa: empresaPayload, usuario: usuarioPayload });
 
       if (res.ok) {
-        alert('Empresa y usuario administrador creados correctamente');
+        toast('Empresa y usuario administrador creados correctamente');
         location.hash = '#/login';
       } else {
-        alert(res.msg || 'No se pudo crear la empresa y el usuario');
+        toast(res.msg || 'No se pudo crear la empresa y el usuario');
       }
     } catch (e) {
-      alert(e.message || 'Error al crear empresa y usuario');
+      toast(e.message || 'Error al crear empresa y usuario');
     }
   });
 
