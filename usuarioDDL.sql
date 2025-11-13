@@ -579,3 +579,490 @@ BEGIN
         AND    p.estado      = 1;
 END SP_GET_PERMISOS_POR_USUARIO;
 /
+
+--------------------------------------------------------------------
+-- VISTA 1: Usuarios con su empresa y rol
+--------------------------------------------------------------------
+CREATE OR REPLACE VIEW vw_usuarios_empresas_roles AS
+SELECT
+    ue.id_usuario,
+    u.nombre        AS nombre_usuario,
+    u.usuario       AS username,
+    u.email,
+    ue.id_empresa,
+    e.nombre        AS nombre_empresa,
+    ue.id_rol,
+    r.nombre_rol,
+    u.estado        AS estado_usuario,
+    e.estado        AS estado_empresa
+FROM usuarios          u
+JOIN usuarios_empresas ue ON u.id_usuario = ue.id_usuario
+JOIN empresas          e  ON ue.id_empresa = e.id_empresa
+JOIN roles             r  ON ue.id_rol     = r.id_rol;
+--------------------------------------------------------------------
+-- VISTA 2: Empresas activas
+--------------------------------------------------------------------
+CREATE OR REPLACE VIEW vw_empresas_activas AS
+SELECT
+    id_empresa,
+    nombre,
+    cedula_juridica,
+    direccion,
+    telefono,
+    email,
+    logo,
+    fecha_creacion
+FROM empresas
+WHERE estado = 1;
+--------------------------------------------------------------------
+-- VISTA 3: Roles con sus permisos
+--------------------------------------------------------------------
+CREATE OR REPLACE VIEW vw_roles_permisos AS
+SELECT
+    r.id_rol,
+    r.nombre_rol,
+    p.id_permiso,
+    p.nombre_permiso,
+    p.categoria,
+    r.estado AS estado_rol,
+    p.estado AS estado_permiso
+FROM roles          r
+JOIN roles_permisos rp ON r.id_rol      = rp.id_rol
+JOIN permisos       p  ON rp.id_permiso = p.id_permiso;
+--------------------------------------------------------------------
+-- VISTA 4: Sesiones de usuario con datos básicos
+--------------------------------------------------------------------
+CREATE OR REPLACE VIEW vw_log_sesiones_detalle AS
+SELECT
+    ls.id_sesion,
+    ls.id_usuario,
+    u.nombre        AS nombre_usuario,
+    u.usuario       AS username,
+    ls.ip_origen,
+    ls.dispositivo,
+    ls.descripcion,
+    ls.fecha_inicio,
+    ls.fecha_cierre,
+    ls.estado
+FROM log_sesiones ls
+JOIN usuarios     u ON ls.id_usuario = u.id_usuario;
+--------------------------------------------------------------------
+-- VISTA 5: Usuarios activos (para combos / listas rápidas)
+--------------------------------------------------------------------
+CREATE OR REPLACE VIEW vw_usuarios_activos AS
+SELECT
+    id_usuario,
+    nombre,
+    usuario,
+    email,
+    telefono,
+    fecha_creacion
+FROM usuarios
+WHERE estado = 1;
+
+--------------------------------------------------------------------
+-- FUNCIÓN 1: ¿Usuario activo? (1 = sí, 0 = no / no existe)
+--------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_usuario_activo(
+    p_id_usuario IN usuarios.id_usuario%TYPE
+) RETURN NUMBER
+IS
+    v_estado usuarios.estado%TYPE;
+BEGIN
+    SELECT estado
+    INTO   v_estado
+    FROM   usuarios
+    WHERE  id_usuario = p_id_usuario;
+
+    IF v_estado = 1 THEN
+        RETURN 1;
+    ELSE
+        RETURN 0;
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END fn_usuario_activo;
+/
+--------------------------------------------------------------------
+-- FUNCIÓN 2: ¿Empresa activa? (1 = sí, 0 = no / no existe)
+--------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_empresa_activa(
+    p_id_empresa IN empresas.id_empresa%TYPE
+) RETURN NUMBER
+IS
+    v_estado empresas.estado%TYPE;
+BEGIN
+    SELECT estado
+    INTO   v_estado
+    FROM   empresas
+    WHERE  id_empresa = p_id_empresa;
+
+    IF v_estado = 1 THEN
+        RETURN 1;
+    ELSE
+        RETURN 0;
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END fn_empresa_activa;
+/
+--------------------------------------------------------------------
+-- FUNCIÓN 3: Obtener nombre de usuario por id
+--------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_get_nombre_usuario(
+    p_id_usuario IN usuarios.id_usuario%TYPE
+) RETURN VARCHAR2
+IS
+    v_nombre usuarios.nombre%TYPE;
+BEGIN
+    SELECT nombre
+    INTO   v_nombre
+    FROM   usuarios
+    WHERE  id_usuario = p_id_usuario;
+
+    RETURN v_nombre;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN NULL;
+END fn_get_nombre_usuario;
+/
+--------------------------------------------------------------------
+-- FUNCIÓN 4: Obtener nombre de empresa por id
+--------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_get_nombre_empresa(
+    p_id_empresa IN empresas.id_empresa%TYPE
+) RETURN VARCHAR2
+IS
+    v_nombre empresas.nombre%TYPE;
+BEGIN
+    SELECT nombre
+    INTO   v_nombre
+    FROM   empresas
+    WHERE  id_empresa = p_id_empresa;
+
+    RETURN v_nombre;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN NULL;
+END fn_get_nombre_empresa;
+/
+--------------------------------------------------------------------
+-- FUNCIÓN 5: ¿Usuario tiene X permiso en una empresa? (1 / 0)
+-- Usa la relación usuario -> empresa -> rol -> roles_permisos -> permisos
+--------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_tiene_permiso(
+    p_id_usuario      IN usuarios.id_usuario%TYPE,
+    p_id_empresa      IN empresas.id_empresa%TYPE,
+    p_nombre_permiso  IN permisos.nombre_permiso%TYPE
+) RETURN NUMBER
+IS
+    v_cantidad NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO   v_cantidad
+    FROM   usuarios_empresas ue
+    JOIN   roles             r  ON ue.id_rol      = r.id_rol
+    JOIN   roles_permisos    rp ON r.id_rol       = rp.id_rol
+    JOIN   permisos          p  ON rp.id_permiso  = p.id_permiso
+    WHERE  ue.id_usuario     = p_id_usuario
+    AND    ue.id_empresa     = p_id_empresa
+    AND    LOWER(p.nombre_permiso) = LOWER(p_nombre_permiso)
+    AND    r.estado          = 1
+    AND    p.estado          = 1;
+
+    IF v_cantidad > 0 THEN
+        RETURN 1;
+    ELSE
+        RETURN 0;
+    END IF;
+END fn_tiene_permiso;
+/
+
+--------------------------------------------------------------------
+-- PAQUETE 1: PKG_USUARIOS
+--------------------------------------------------------------------
+CREATE OR REPLACE PACKAGE PKG_USUARIOS AS
+    TYPE t_cursor IS REF CURSOR;
+
+    -- Lista usuarios de una empresa (para reportes / combos)
+    PROCEDURE prc_listar_usuarios_empresa(
+        p_id_empresa IN usuarios_empresas.id_empresa%TYPE,
+        p_cursor     OUT t_cursor
+    );
+
+    -- Cuenta usuarios de una empresa usando cursor explícito
+    PROCEDURE prc_contar_usuarios_empresa(
+        p_id_empresa IN usuarios_empresas.id_empresa%TYPE,
+        p_total      OUT NUMBER
+    );
+END PKG_USUARIOS;
+/
+CREATE OR REPLACE PACKAGE BODY PKG_USUARIOS AS
+
+    -- Cursor explícito (1)
+    CURSOR c_usuarios_empresa(p_id_empresa NUMBER) IS
+        SELECT u.id_usuario
+        FROM   usuarios u
+        JOIN   usuarios_empresas ue ON u.id_usuario = ue.id_usuario
+        WHERE  ue.id_empresa = p_id_empresa;
+
+    PROCEDURE prc_listar_usuarios_empresa(
+        p_id_empresa IN usuarios_empresas.id_empresa%TYPE,
+        p_cursor     OUT t_cursor
+    ) IS
+    BEGIN
+        OPEN p_cursor FOR
+            SELECT 
+                u.id_usuario,
+                u.nombre,
+                u.usuario,
+                u.email,
+                u.telefono,
+                ue.id_empresa,
+                e.nombre AS nombre_empresa,
+                ue.id_rol,
+                r.nombre_rol
+            FROM usuarios          u
+            JOIN usuarios_empresas ue ON u.id_usuario = ue.id_usuario
+            JOIN empresas          e  ON ue.id_empresa = e.id_empresa
+            JOIN roles             r  ON ue.id_rol     = r.id_rol
+            WHERE ue.id_empresa = p_id_empresa;
+    END prc_listar_usuarios_empresa;
+
+    PROCEDURE prc_contar_usuarios_empresa(
+        p_id_empresa IN usuarios_empresas.id_empresa%TYPE,
+        p_total      OUT NUMBER
+    ) IS
+        v_contador NUMBER := 0;
+    BEGIN
+        FOR r IN c_usuarios_empresa(p_id_empresa) LOOP
+            v_contador := v_contador + 1;
+        END LOOP;
+        p_total := v_contador;
+    END prc_contar_usuarios_empresa;
+
+END PKG_USUARIOS;
+/
+
+--------------------------------------------------------------------
+-- PAQUETE 2: PKG_EMPRESAS
+--------------------------------------------------------------------
+CREATE OR REPLACE PACKAGE PKG_EMPRESAS AS
+    TYPE t_cursor IS REF CURSOR;
+
+    -- Lista empresas de un usuario
+    PROCEDURE prc_listar_empresas_usuario(
+        p_id_usuario IN usuarios_empresas.id_usuario%TYPE,
+        p_cursor     OUT t_cursor
+    );
+
+    -- Cuenta empresas activas usando cursor explícito
+    PROCEDURE prc_contar_empresas_activas(
+        p_total OUT NUMBER
+    );
+END PKG_EMPRESAS;
+/
+CREATE OR REPLACE PACKAGE BODY PKG_EMPRESAS AS
+
+    -- Cursor explícito (2)
+    CURSOR c_empresas_activas IS
+        SELECT id_empresa
+        FROM   empresas
+        WHERE  estado = 1;
+
+    PROCEDURE prc_listar_empresas_usuario(
+        p_id_usuario IN usuarios_empresas.id_usuario%TYPE,
+        p_cursor     OUT t_cursor
+    ) IS
+    BEGIN
+        OPEN p_cursor FOR
+            SELECT 
+                e.id_empresa,
+                e.nombre,
+                e.cedula_juridica,
+                e.direccion,
+                e.telefono,
+                e.email,
+                e.logo,
+                e.estado
+            FROM empresas          e
+            JOIN usuarios_empresas ue ON e.id_empresa = ue.id_empresa
+            WHERE ue.id_usuario = p_id_usuario;
+    END prc_listar_empresas_usuario;
+
+    PROCEDURE prc_contar_empresas_activas(
+        p_total OUT NUMBER
+    ) IS
+        v_contador NUMBER := 0;
+    BEGIN
+        FOR r IN c_empresas_activas LOOP
+            v_contador := v_contador + 1;
+        END LOOP;
+        p_total := v_contador;
+    END prc_contar_empresas_activas;
+
+END PKG_EMPRESAS;
+/
+
+--------------------------------------------------------------------
+-- PAQUETE 3: PKG_SEGURIDAD
+--------------------------------------------------------------------
+CREATE OR REPLACE PACKAGE PKG_SEGURIDAD AS
+    TYPE t_cursor IS REF CURSOR;
+
+    -- Lista permisos de un rol
+    PROCEDURE prc_listar_permisos_rol(
+        p_id_rol IN roles.id_rol%TYPE,
+        p_cursor OUT t_cursor
+    );
+
+    -- Cuenta permisos activos usando cursor explícito
+    PROCEDURE prc_contar_permisos_activos(
+        p_total OUT NUMBER
+    );
+END PKG_SEGURIDAD;
+/
+CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD AS
+
+    -- Cursor explícito (3)
+    CURSOR c_permisos_activos IS
+        SELECT id_permiso
+        FROM   permisos
+        WHERE  estado = 1;
+
+    PROCEDURE prc_listar_permisos_rol(
+        p_id_rol IN roles.id_rol%TYPE,
+        p_cursor OUT t_cursor
+    ) IS
+    BEGIN
+        OPEN p_cursor FOR
+            SELECT 
+                p.id_permiso,
+                p.nombre_permiso,
+                p.categoria,
+                p.estado
+            FROM roles_permisos rp
+            JOIN permisos      p ON rp.id_permiso = p.id_permiso
+            WHERE rp.id_rol = p_id_rol;
+    END prc_listar_permisos_rol;
+
+    PROCEDURE prc_contar_permisos_activos(
+        p_total OUT NUMBER
+    ) IS
+        v_contador NUMBER := 0;
+    BEGIN
+        FOR r IN c_permisos_activos LOOP
+            v_contador := v_contador + 1;
+        END LOOP;
+        p_total := v_contador;
+    END prc_contar_permisos_activos;
+
+END PKG_SEGURIDAD;
+/
+
+--------------------------------------------------------------------
+-- PAQUETE 4: PKG_AUDITORIA
+--------------------------------------------------------------------
+CREATE OR REPLACE PACKAGE PKG_AUDITORIA AS
+    TYPE t_cursor IS REF CURSOR;
+
+    -- Lista sesiones de un usuario
+    PROCEDURE prc_listar_sesiones_usuario(
+        p_id_usuario IN log_sesiones.id_usuario%TYPE,
+        p_cursor     OUT t_cursor
+    );
+
+    -- Cuenta actividades de un usuario usando cursor explícito
+    PROCEDURE prc_contar_actividades_usuario(
+        p_id_usuario IN log_actividades.id_usuario%TYPE,
+        p_total      OUT NUMBER
+    );
+END PKG_AUDITORIA;
+/
+CREATE OR REPLACE PACKAGE BODY PKG_AUDITORIA AS
+
+    -- Cursor explícito (4)
+    CURSOR c_actividades_usuario(p_id_usuario NUMBER) IS
+        SELECT id_log
+        FROM   log_actividades
+        WHERE  id_usuario = p_id_usuario;
+
+    PROCEDURE prc_listar_sesiones_usuario(
+        p_id_usuario IN log_sesiones.id_usuario%TYPE,
+        p_cursor     OUT t_cursor
+    ) IS
+    BEGIN
+        OPEN p_cursor FOR
+            SELECT
+                id_sesion,
+                id_usuario,
+                ip_origen,
+                dispositivo,
+                descripcion,
+                fecha_inicio,
+                fecha_cierre,
+                estado
+            FROM log_sesiones
+            WHERE id_usuario = p_id_usuario;
+    END prc_listar_sesiones_usuario;
+
+    PROCEDURE prc_contar_actividades_usuario(
+        p_id_usuario IN log_actividades.id_usuario%TYPE,
+        p_total      OUT NUMBER
+    ) IS
+        v_contador NUMBER := 0;
+    BEGIN
+        FOR r IN c_actividades_usuario(p_id_usuario) LOOP
+            v_contador := v_contador + 1;
+        END LOOP;
+        p_total := v_contador;
+    END prc_contar_actividades_usuario;
+
+END PKG_AUDITORIA;
+/
+
+--------------------------------------------------------------------
+-- TRIGGER 1: Normaliza usuario/email en minúsculas
+-- Antes de INSERT/UPDATE en USUARIOS
+--------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER trg_biu_usuarios_normaliza
+BEFORE INSERT OR UPDATE ON usuarios
+FOR EACH ROW
+BEGIN
+    IF :NEW.usuario IS NOT NULL THEN
+        :NEW.usuario := LOWER(:NEW.usuario);
+    END IF;
+
+    IF :NEW.email IS NOT NULL THEN
+        :NEW.email := LOWER(:NEW.email);
+    END IF;
+
+    IF INSERTING THEN
+        IF :NEW.estado IS NULL THEN
+            :NEW.estado := 1;
+        END IF;
+        IF :NEW.fecha_creacion IS NULL THEN
+            :NEW.fecha_creacion := SYSDATE;
+        END IF;
+    END IF;
+END trg_biu_usuarios_normaliza;
+/
+--------------------------------------------------------------------
+-- TRIGGER 2: Valores por defecto en EMPRESAS
+-- Antes de INSERT en EMPRESAS
+--------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER trg_bi_empresas_default
+BEFORE INSERT ON empresas
+FOR EACH ROW
+BEGIN
+    IF :NEW.estado IS NULL THEN
+        :NEW.estado := 1;
+    END IF;
+
+    IF :NEW.fecha_creacion IS NULL THEN
+        :NEW.fecha_creacion := SYSDATE;
+    END IF;
+END trg_bi_empresas_default;
+/
