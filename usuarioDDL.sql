@@ -376,3 +376,206 @@ BEGIN
 END SP_ASIGNAR_USUARIO_EMPRESA;
 /
 
+--------------------------------------------------------------------
+-- Cambiar estado de un usuario (activo/inactivo) YML
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_USUARIO(
+    p_id_usuario   IN usuarios.id_usuario%TYPE,
+    p_nuevo_estado IN usuarios.estado%TYPE
+) AS
+BEGIN
+    UPDATE usuarios
+    SET    estado = p_nuevo_estado
+    WHERE  id_usuario = p_id_usuario;
+END SP_CAMBIAR_ESTADO_USUARIO;
+/
+--------------------------------------------------------------------
+-- Cambiar estado de una empresa (activa/inactiva) YML
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_CAMBIAR_ESTADO_EMPRESA(
+    p_id_empresa   IN empresas.id_empresa%TYPE,
+    p_nuevo_estado IN empresas.estado%TYPE
+) AS
+BEGIN
+    UPDATE empresas
+    SET    estado = p_nuevo_estado
+    WHERE  id_empresa = p_id_empresa;
+END SP_CAMBIAR_ESTADO_EMPRESA;
+/
+--------------------------------------------------------------------
+-- Actualizar datos básicos de usuario YML
+--    Si algún parámetro viene NULL, se mantiene el valor actual.
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_DATOS_USUARIO(
+    p_id_usuario IN usuarios.id_usuario%TYPE,
+    p_nombre     IN usuarios.nombre%TYPE,
+    p_email      IN usuarios.email%TYPE,
+    p_telefono   IN usuarios.telefono%TYPE
+) AS
+BEGIN
+    UPDATE usuarios
+    SET    nombre   = NVL(p_nombre,   nombre),
+           email    = NVL(p_email,    email),
+           telefono = NVL(p_telefono, telefono)
+    WHERE  id_usuario = p_id_usuario;
+END SP_ACTUALIZAR_DATOS_USUARIO;
+/
+--------------------------------------------------------------------
+-- Actualizar datos básicos de empresa YML
+--    Si algún parámetro viene NULL, se mantiene el valor actual.
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_ACTUALIZAR_DATOS_EMPRESA(
+    p_id_empresa      IN empresas.id_empresa%TYPE,
+    p_nombre          IN empresas.nombre%TYPE,
+    p_cedula_juridica IN empresas.cedula_juridica%TYPE,
+    p_direccion       IN empresas.direccion%TYPE,
+    p_telefono        IN empresas.telefono%TYPE,
+    p_email           IN empresas.email%TYPE,
+    p_logo            IN empresas.logo%TYPE
+) AS
+BEGIN
+    UPDATE empresas
+    SET    nombre          = NVL(p_nombre,          nombre),
+           cedula_juridica = NVL(p_cedula_juridica, cedula_juridica),
+           direccion       = NVL(p_direccion,       direccion),
+           telefono        = NVL(p_telefono,        telefono),
+           email           = NVL(p_email,           email),
+           logo            = NVL(p_logo,            logo)
+    WHERE  id_empresa = p_id_empresa;
+END SP_ACTUALIZAR_DATOS_EMPRESA;
+/
+--------------------------------------------------------------------
+-- Registrar inicio de sesión YML
+--    Crea un registro en log_sesiones y devuelve el id_sesion.
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_REGISTRAR_SESION_INICIO(
+    p_id_usuario  IN log_sesiones.id_usuario%TYPE,
+    p_ip_origen   IN log_sesiones.ip_origen%TYPE,
+    p_dispositivo IN log_sesiones.dispositivo%TYPE,
+    p_descripcion IN log_sesiones.descripcion%TYPE,
+    o_id_sesion   OUT log_sesiones.id_sesion%TYPE
+) AS
+BEGIN
+    INSERT INTO log_sesiones(
+        id_usuario,
+        ip_origen,
+        dispositivo,
+        descripcion,
+        fecha_inicio,
+        estado
+    )
+    VALUES(
+        p_id_usuario,
+        p_ip_origen,
+        p_dispositivo,
+        p_descripcion,
+        SYSDATE,
+        1 -- 1 = sesión activa
+    )
+    RETURNING id_sesion INTO o_id_sesion;
+END SP_REGISTRAR_SESION_INICIO;
+/
+--------------------------------------------------------------------
+-- Registrar cierre de sesión YML
+--    Marca fecha_cierre y actualiza estado (ej: 0 = cerrada).
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_REGISTRAR_SESION_CIERRE(
+    p_id_sesion    IN log_sesiones.id_sesion%TYPE,
+    p_descripcion  IN log_sesiones.descripcion%TYPE,
+    p_nuevo_estado IN log_sesiones.estado%TYPE
+) AS
+BEGIN
+    UPDATE log_sesiones
+    SET    fecha_cierre = SYSDATE,
+           descripcion  = NVL(p_descripcion, descripcion),
+           estado       = p_nuevo_estado
+    WHERE  id_sesion = p_id_sesion;
+END SP_REGISTRAR_SESION_CIERRE;
+/
+--------------------------------------------------------------------
+-- Registrar actividad del usuario en un módulo YML
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_REGISTRAR_ACTIVIDAD(
+    p_id_usuario  IN log_actividades.id_usuario%TYPE,
+    p_modulo      IN log_actividades.modulo%TYPE,
+    p_accion      IN log_actividades.accion%TYPE,
+    p_objeto      IN log_actividades.objeto%TYPE,
+    p_descripcion IN log_actividades.descripcion%TYPE,
+    p_ip_origen   IN log_actividades.ip_origen%TYPE
+) AS
+BEGIN
+    INSERT INTO log_actividades(
+        id_usuario,
+        modulo,
+        accion,
+        objeto,
+        descripcion,
+        ip_origen,
+        fecha_accion
+    )
+    VALUES(
+        p_id_usuario,
+        p_modulo,
+        p_accion,
+        p_objeto,
+        p_descripcion,
+        p_ip_origen,
+        SYSDATE
+    );
+END SP_REGISTRAR_ACTIVIDAD;
+/
+--------------------------------------------------------------------
+--  Asignar permiso a un rol YML
+--    Si ya existe la relación, no genera error (maneja DUP_VAL_ON_INDEX).
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_ASIGNAR_PERMISO_ROL(
+    p_id_rol     IN roles_permisos.id_rol%TYPE,
+    p_id_permiso IN roles_permisos.id_permiso%TYPE
+) AS
+BEGIN
+    INSERT INTO roles_permisos(id_rol, id_permiso)
+    VALUES (p_id_rol, p_id_permiso);
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        NULL; -- Ya existe, no hacemos nada
+END SP_ASIGNAR_PERMISO_ROL;
+/
+--------------------------------------------------------------------
+-- Remover permiso de un rol YML
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_REMOVER_PERMISO_ROL(
+    p_id_rol     IN roles_permisos.id_rol%TYPE,
+    p_id_permiso IN roles_permisos.id_permiso%TYPE
+) AS
+BEGIN
+    DELETE FROM roles_permisos
+    WHERE  id_rol     = p_id_rol
+    AND    id_permiso = p_id_permiso;
+END SP_REMOVER_PERMISO_ROL;
+/
+--------------------------------------------------------------------
+--  Obtener permisos de un usuario en una empresa YML
+--     Usa el rol asignado en usuarios_empresas y devuelve un cursor con
+--     los permisos activos de ese usuario en esa empresa.
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE SP_GET_PERMISOS_POR_USUARIO(
+    p_id_usuario IN usuarios.id_usuario%TYPE,
+    p_id_empresa IN empresas.id_empresa%TYPE,
+    p_cursor     OUT SYS_REFCURSOR
+) AS
+BEGIN
+    OPEN p_cursor FOR
+        SELECT DISTINCT
+               p.id_permiso,
+               p.nombre_permiso,
+               p.categoria
+        FROM   usuarios_empresas   ue
+        JOIN   roles               r  ON ue.id_rol      = r.id_rol
+        JOIN   roles_permisos      rp ON r.id_rol       = rp.id_rol
+        JOIN   permisos            p  ON rp.id_permiso  = p.id_permiso
+        WHERE  ue.id_usuario = p_id_usuario
+        AND    ue.id_empresa = p_id_empresa
+        AND    r.estado      = 1
+        AND    p.estado      = 1;
+END SP_GET_PERMISOS_POR_USUARIO;
+/
