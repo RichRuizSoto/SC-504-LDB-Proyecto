@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>Punto de Venta</h1>
+            <h1>🛒 Punto de Venta</h1>
             <div class="header-info">
                 <span id="usuario-nombre">Usuario</span>
                 <span id="fecha-hora"></span>
@@ -29,6 +29,7 @@
                 </div>
 
                 <div class="productos-list" id="productos-list">
+                    <!-- Los productos se cargan aquí dinámicamente -->
                 </div>
             </div>
 
@@ -51,7 +52,6 @@
                     </select>
                 </div>
 
-                <!-- Carrito -->
                 <div class="carrito-section">
                     <h3>Carrito de Compra</h3>
                     <div id="carrito-items">
@@ -118,6 +118,5 @@
     <!-- Scripts -->
     <script src="js/services/ventasService.js"></script>
     <script src="js/controllers/VentasController.js"></script>
-    <script src="js/views/VentasView.js"></script>
 </body>
 </html>

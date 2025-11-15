@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Ventas - Repuestos Zona Honda</title>
+    <link rel="stylesheet" href="css/historial.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📊 Historial de Ventas</h1>
+            <button id="btn-volver" class="btn-secondary">Volver al POS</button>
+        </header>
+
+        <!-- Filtros -->
+        <div class="filtros-section">
+            <h2>Filtros</h2>
+            <div class="filtros-grid">
+                <div class="form-group">
+                    <label>Fecha Inicio:</label>
+                    <input type="date" id="fecha-inicio">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Fin:</label>
+                    <input type="date" id="fecha-fin">
+                </div>
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select id="filtro-estado">
+                        <option value="">Todos</option>
+                        <option value="REGISTRADA">Registrada</option>
+                        <option value="CANCELADA">Cancelada</option>
+                        <option value="EN_PROCESO">En Proceso</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button id="btn-filtrar" class="btn-primary">Buscar</button>
+                    <button id="btn-limpiar" class="btn-secondary">Limpiar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen estadístico -->
+        <div class="resumen-stats">
+            <div class="stat-card">
+                <h3>Total Ventas</h3>
+                <p id="stat-total-ventas">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Monto Total</h3>
+                <p id="stat-monto-total">₡0.00</p>
+            </div>
+            <div class="stat-card">
+                <h3>Promedio</h3>
+                <p id="stat-promedio">₡0.00</p>
+            </div>
+        </div>
+
+        <!-- Tabla de ventas -->
+        <div class="tabla-section">
+            <table id="tabla-ventas">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Fecha</th>
+                        <th>Vendedor</th>
+                        <th>Cliente</th>
+                        <th>Método Pago</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-ventas">
+                    <tr>
+                        <td colspan="8" class="text-center">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal-detalle" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" id="close-modal-detalle">&times;</span>
+            <h2>Detalle de Venta <span id="detalle-codigo"></span></h2>
+            
+            <div class="detalle-info">
+                <p><strong>Fecha:</strong> <span id="detalle-fecha"></span></p>
+                <p><strong>Vendedor:</strong> <span id="detalle-vendedor"></span></p>
+                <p><strong>Cliente:</strong> <span id="detalle-cliente"></span></p>
+            </div>
+
+            <table class="tabla-detalle">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unit.</th>
+                        <th>Descuento</th>
+                        <th>Subtotal</th>
+                        <th>IVA</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-detalle">
+                </tbody>
+            </table>
+
+            <div class="detalle-totales">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span id="detalle-subtotal">₡0.00</span>
+                </div>
+                <div class="total-row">
+                    <span>Descuento:</span>
+                    <span id="detalle-descuento">₡0.00</span>
+                </div>
+                <div class="total-row">
+                    <span>IVA:</span>
+                    <span id="detalle-impuesto">₡0.00</span>
+                </div>
+                <div class="total-row total">
+                    <span>Total:</span>
+                    <span id="detalle-total">₡0.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/services/ventasService.js"></script>
+    <script src="js/controllers/HistorialController.js"></script>
+</body>
+</html>
