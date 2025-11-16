@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta - Repuestos Zona Honda</title>
+    <link rel="stylesheet" href="css/ventas.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🛒 Punto de Venta</h1>
+            <div class="header-info">
+                <span id="usuario-nombre">Usuario</span>
+                <span id="fecha-hora"></span>
+                <button id="btn-cerrar-sesion" class="btn-logout">Cerrar Sesión</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Panel izquierdo: Búsqueda y productos -->
+            <div class="left-panel">
+                <div class="search-section">
+                    <h2>Buscar Productos</h2>
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Buscar por nombre...">
+                        <button id="btn-search">Buscar</button>
+                    </div>
+                </div>
+
+                <div class="productos-list" id="productos-list">
+                    <!-- Los productos se cargan aquí dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Panel derecho: Carrito y resumen -->
+            <div class="right-panel">
+                <!-- Información del cliente -->
+                <div class="cliente-section">
+                    <h3>Cliente</h3>
+                    <select id="select-cliente">
+                        <option value="">Cliente General</option>
+                    </select>
+                    <button id="btn-nuevo-cliente" class="btn-secondary">Nuevo Cliente</button>
+                </div>
+
+                <!-- Método de pago -->
+                <div class="pago-section">
+                    <h3>Método de Pago</h3>
+                    <select id="select-metodo-pago">
+                        <option value="">Seleccione...</option>
+                    </select>
+                </div>
+
+                <div class="carrito-section">
+                    <h3>Carrito de Compra</h3>
+                    <div id="carrito-items">
+                        <p class="carrito-vacio">El carrito está vacío</p>
+                    </div>
+                </div>
+
+                <!-- Resumen de venta -->
+                <div class="resumen-section">
+                    <div class="resumen-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">₡0.00</span>
+                    </div>
+                    <div class="resumen-row">
+                        <span>Descuento:</span>
+                        <span id="descuento">₡0.00</span>
+                    </div>
+                    <div class="resumen-row">
+                        <span>IVA (13%):</span>
+                        <span id="impuesto">₡0.00</span>
+                    </div>
+                    <div class="resumen-row total">
+                        <span>Total:</span>
+                        <span id="total">₡0.00</span>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="acciones-section">
+                    <button id="btn-finalizar" class="btn-primary">Finalizar Venta</button>
+                    <button id="btn-cancelar" class="btn-danger">Cancelar</button>
+                    <button id="btn-ver-historial" class="btn-secondary">Ver Historial</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para nuevo cliente -->
+    <div id="modal-cliente" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Nuevo Cliente</h2>
+            <form id="form-cliente">
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" id="cliente-nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Cédula:</label>
+                    <input type="text" id="cliente-cedula" required>
+                </div>
+                <div class="form-group">
+                    <label>Teléfono:</label>
+                    <input type="text" id="cliente-telefono">
+                </div>
+                <button type="submit" class="btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast para notificaciones -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Scripts -->
+    <script src="js/services/ventasService.js"></script>
+    <script src="js/controllers/VentasController.js"></script>
+</body>
+</html>
