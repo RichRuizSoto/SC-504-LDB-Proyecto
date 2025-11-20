@@ -1,0 +1,27 @@
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21.3.0
+    container_name: oracle-xe
+    environment:
+      ORACLE_PASSWORD: tienda
+      ORACLE_DATABASE: PDBTIENDA
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  web:
+    image: php:8.2-apache
+    container_name: php-oracle-web
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - oracle
+    extra_hosts:
+      - "oracle:host-gateway"
+
+volumes:
+  oracle-data:
