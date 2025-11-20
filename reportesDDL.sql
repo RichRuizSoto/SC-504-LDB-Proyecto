@@ -115,7 +115,7 @@ BEGIN
     WHERE ue.id_usuario = p_id_usuario;
 
     -- VENDEDOR → SOLO LO SUYO
-    IF v_rol = 'vendedor' THEN
+    IF v_rol = (SELECT id_rol FROM roles WHERE nombre_rol = 'vendedor') THEN
         FOR r IN (
             SELECT rg.*, tr.nombre_reporte
             FROM reportes_generados rg
@@ -156,7 +156,9 @@ CREATE OR REPLACE PROCEDURE actualizar_estado_reporte (
 ) AS
     v_rol usuarios.rol%TYPE;
 BEGIN
-    SELECT rol INTO v_rol FROM usuarios WHERE id_usuario = p_id_usuario;
+    SELECT ue.id_rol INTO v_rol 
+    FROM usuarios_empresas ue
+    WHERE ue.id_usuario = p_id_usuario;
 
     IF v_rol <> 'admin' THEN
         RAISE_APPLICATION_ERROR(-20010, 'Solo administradores pueden completar reportes');
@@ -340,7 +342,7 @@ END;
 /
 
 
-CCREATE OR REPLACE PROCEDURE cur_reportes_empresa (
+CREATE OR REPLACE PROCEDURE cur_reportes_empresa (
     p_id_empresa IN NUMBER
 ) AS
     CURSOR c_rep_emp IS
