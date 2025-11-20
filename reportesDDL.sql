@@ -66,136 +66,543 @@ CREATE TABLE reportes_generados (
 
 
 
+--------------------------------------------------------------------
+-- SP: generar_reporte
+-- Crea un registro de reporte con estado ENVIADO
+--------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE generar_reporte (
-    p_fecha_inicio IN DATE,
-    p_fecha_fin IN DATE,
-    p_id_usuario IN NUMBER,
-    p_tipo_reporte IN VARCHAR2
+    p_id_usuario   IN NUMBER,
+    p_id_tipo_reporte IN NUMBER,
+    p_parametros_json IN CLOB,
+    p_formato_salida  IN VARCHAR2
 ) AS
 BEGIN
-    -- Insertar reporte generado en la tabla reportes_generados
     INSERT INTO reportes_generados (
         id_tipo_reporte,
         id_usuario,
         parametros_json,
+        formato_salida,
         estado,
         fecha_creacion
     ) VALUES (
-        p_tipo_reporte, 
-        p_id_usuario, 
-        '{"fecha_inicio": "' || TO_CHAR(p_fecha_inicio, 'YYYY-MM-DD') || '", "fecha_fin": "' || TO_CHAR(p_fecha_fin, 'YYYY-MM-DD') || '"}',
-        'Enviado',  -- El reporte comienza con el estado 'Enviado'
-        SYSDATE
+        p_id_tipo_reporte,
+        p_id_usuario,
+        p_parametros_json,
+        p_formato_salida,
+        'Enviado',
+        SYSTIMESTAMP
     );
 
     COMMIT;
-END generar_reporte;
-/
-CREATE OR REPLACE PROCEDURE consultar_reportes (
-    p_id_usuario IN NUMBER
-) AS
-BEGIN
-    -- Administradores pueden ver todos los reportes, vendedores solo los suyos
-    FOR reporte IN (
-        SELECT 
-            rg.id_reporte_generado, 
-            tr.nombre_reporte, 
-            rg.fecha_creacion, 
-            rg.estado, 
-            rg.ruta_archivo,
-            rg.formato_salida
-        FROM reportes_generados rg
-        JOIN tipo_reporte tr ON rg.id_tipo_reporte = tr.id_tipo_reporte
-        WHERE rg.id_usuario = p_id_usuario
-        OR EXISTS (
-            SELECT 1 FROM usuarios u WHERE u.id_usuario = p_id_usuario AND u.rol = 'admin'
-        )
-        ORDER BY rg.fecha_creacion DESC
-    ) LOOP
-        -- Aquí se pueden hacer operaciones o imprimir resultados si se desea
-        DBMS_OUTPUT.PUT_LINE('Reporte: ' || reporte.nombre_reporte || ' - Estado: ' || reporte.estado);
-    END LOOP;
-END consultar_reportes;
+END;
 /
 
-CREATE OR REPLACE TRIGGER trg_actualizar_estado_reporte
-AFTER UPDATE OF estado ON reportes_generados
-FOR EACH ROW
+-------------------------------------------------------------------
+-- SP: consultar_reportes_usuario
+-- Vendedor → solo sus reportes
+-- Admin → todos los de su empresa
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE consultar_reportes_usuario (
+    p_id_usuario IN NUMBER
+) AS
+    v_rol usuarios_empresas.id_rol%TYPE;  
 BEGIN
-    -- Solo los administradores pueden actualizar el estado de los reportes
-    IF :NEW.estado = 'Completado' AND :NEW.id_usuario IN (
-        SELECT id_usuario FROM usuarios WHERE rol = 'admin' -- Verificamos si el usuario es admin
-    ) THEN
-        UPDATE reportes_generados
-        SET estado = 'Completado', fecha_creacion = SYSTIMESTAMP
-        WHERE id_reporte_generado = :NEW.id_reporte_generado;
+    
+    SELECT ue.id_rol, u.id_empresa
+    INTO v_rol, v_empresa
+    FROM usuarios_empresas ue
+    JOIN usuarios u ON u.id_usuario = ue.id_usuario
+    WHERE ue.id_usuario = p_id_usuario;
+
+    -- VENDEDOR → SOLO LO SUYO
+    IF v_rol = 'vendedor' THEN
+        FOR r IN (
+            SELECT rg.*, tr.nombre_reporte
+            FROM reportes_generados rg
+            JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+            WHERE rg.id_usuario = p_id_usuario
+            ORDER BY rg.fecha_creacion DESC
+        ) LOOP
+            DBMS_OUTPUT.PUT_LINE(
+                'Reporte: ' || r.nombre_reporte || ' | Estado: ' || r.estado
+            );
+        END LOOP;
+
+    -- ADMIN → TODOS LOS DE SU EMPRESA
+    ELSE
+        FOR r IN (
+            SELECT rg.*, tr.nombre_reporte, u.id_empresa
+            FROM reportes_generados rg
+            JOIN usuarios u ON u.id_usuario = rg.id_usuario
+            JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+            WHERE u.id_empresa = v_empresa
+            ORDER BY rg.fecha_creacion DESC
+        ) LOOP
+            DBMS_OUTPUT.PUT_LINE(
+                'Reporte: ' || r.nombre_reporte || ' | Estado: ' || r.estado
+            );
+        END LOOP;
     END IF;
 END;
 /
 
+-------------------------------------------------------------------
+-- SP: actualizar_estado_reporte
+-- Solo admins pueden marcar como COMPLETADO
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE actualizar_estado_reporte (
+    p_id_usuario IN NUMBER,
+    p_id_reporte IN NUMBER
+) AS
+    v_rol usuarios.rol%TYPE;
+BEGIN
+    SELECT rol INTO v_rol FROM usuarios WHERE id_usuario = p_id_usuario;
+
+    IF v_rol <> 'admin' THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Solo administradores pueden completar reportes');
+    END IF;
+
+    UPDATE reportes_generados
+    SET estado = 'Completado'
+    WHERE id_reporte_generado = p_id_reporte;
+
+    COMMIT;
+END;
+/
+--------------------------------------------------------------------
+-- TRIGGER: evita que usuarios no admin modifiquen ESTADO
+--------------------------------------------------------------------
+CREATE OR REPLACE TRIGGER trg_no_update_estado_no_admin
+BEFORE UPDATE OF estado ON reportes_generados
+FOR EACH ROW
+DECLARE
+    v_rol usuarios_empresas.id_rol%TYPE;  
+BEGIN
+    SELECT ue.id_rol INTO v_rol
+    FROM usuarios_empresas ue
+    WHERE ue.id_usuario = :OLD.id_usuario;
+
+    IF v_rol <> 'admin' THEN
+        RAISE_APPLICATION_ERROR(-20011, 'Solo administradores pueden cambiar estado del reporte');
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------
+-- Vista reportes diarios
+--------------------------------------------------------------------
 CREATE OR REPLACE VIEW vista_reportes_diarios AS
 SELECT 
-    rg.id_reporte_generado, 
-    tr.nombre_reporte, 
-    rg.fecha_creacion, 
-    rg.estado, 
-    rg.ruta_archivo, 
-    rg.formato_salida
+    rg.*, tr.nombre_reporte
 FROM reportes_generados rg
-JOIN tipo_reporte tr ON rg.id_tipo_reporte = tr.id_tipo_reporte
-WHERE TRUNC(rg.fecha_creacion) = TRUNC(SYSDATE);  -- Filtra por el día de hoy
+JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+WHERE TRUNC(rg.fecha_creacion) = TRUNC(SYSDATE);
 /
 
 CREATE OR REPLACE VIEW vista_reportes_mensuales AS
 SELECT 
-    rg.id_reporte_generado, 
-    tr.nombre_reporte, 
-    rg.fecha_creacion, 
-    rg.estado, 
-    rg.ruta_archivo, 
-    rg.formato_salida
+    rg.*, tr.nombre_reporte
 FROM reportes_generados rg
-JOIN tipo_reporte tr ON rg.id_tipo_reporte = tr.id_tipo_reporte
+JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
 WHERE EXTRACT(MONTH FROM rg.fecha_creacion) = EXTRACT(MONTH FROM SYSDATE)
-AND EXTRACT(YEAR FROM rg.fecha_creacion) = EXTRACT(YEAR FROM SYSDATE);  -- Filtra por el mes actual
+  AND EXTRACT(YEAR FROM rg.fecha_creacion) = EXTRACT(YEAR FROM SYSDATE);
 /
 
 CREATE OR REPLACE VIEW vista_reportes_anuales AS
 SELECT 
-    rg.id_reporte_generado, 
-    tr.nombre_reporte, 
-    rg.fecha_creacion, 
-    rg.estado, 
-    rg.ruta_archivo, 
-    rg.formato_salida
+    rg.*, tr.nombre_reporte
 FROM reportes_generados rg
-JOIN tipo_reporte tr ON rg.id_tipo_reporte = tr.id_tipo_reporte
-WHERE EXTRACT(YEAR FROM rg.fecha_creacion) = EXTRACT(YEAR FROM SYSDATE);  -- Filtra por el año actual
+JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+WHERE EXTRACT(YEAR FROM rg.fecha_creacion) = EXTRACT(YEAR FROM SYSDATE);
 /
 
 
 CREATE OR REPLACE VIEW vista_reportes_inventario AS
 SELECT 
-    rg.id_reporte_generado, 
-    tr.nombre_reporte, 
-    rg.fecha_creacion, 
-    rg.estado, 
-    rg.ruta_archivo, 
-    rg.formato_salida
+    rg.*, tr.nombre_reporte
 FROM reportes_generados rg
-JOIN tipo_reporte tr ON rg.id_tipo_reporte = tr.id_tipo_reporte
-WHERE tr.categoria = 'Inventario';  -- Filtra por la categoría 'Inventario'
+JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+WHERE tr.categoria = 'Inventario';
 /
 
 CREATE OR REPLACE VIEW vista_reportes_compras AS
 SELECT 
-    rg.id_reporte_generado, 
-    tr.nombre_reporte, 
-    rg.fecha_creacion, 
-    rg.estado, 
-    rg.ruta_archivo, 
-    rg.formato_salida
+    rg.*, tr.nombre_reporte
 FROM reportes_generados rg
-JOIN tipo_reporte tr ON rg.id_tipo_reporte = tr.id_tipo_reporte
-WHERE tr.categoria = 'Compra';  -- Filtra por la categoría 'Compra'
+JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+WHERE tr.categoria = 'Compra';
+/
+
+--------------------------------------------------------------------
+-- funciones
+--------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_es_admin (
+    p_id_usuario IN NUMBER
+) RETURN NUMBER
+AS
+    v_rol usuarios.rol%TYPE;
+BEGIN
+    SELECT rol INTO v_rol
+    FROM usuarios
+    WHERE id_usuario = p_id_usuario;
+
+    IF v_rol = 'admin' THEN
+        RETURN 1;
+    ELSE
+        RETURN 0;
+    END IF;
+END;
+/
+
+
+CREATE OR REPLACE FUNCTION fn_empresa_usuario (
+    p_id_usuario IN NUMBER
+) RETURN NUMBER
+AS
+    v_empresa NUMBER;
+BEGIN
+    SELECT ue.id_empresa INTO v_empresa  
+    FROM usuarios_empresas ue
+    WHERE ue.id_usuario = p_id_usuario;
+
+    RETURN v_empresa;
+END;
+/
+
+CREATE OR REPLACE FUNCTION fn_stock_producto (
+    p_id_producto IN NUMBER
+) RETURN NUMBER
+AS
+    v_stock NUMBER;
+BEGIN
+    SELECT stock INTO v_stock  
+    FROM productos
+    WHERE id_producto = p_id_producto;
+
+    RETURN v_stock;
+END;
+/
+
+CREATE OR REPLACE FUNCTION fn_nombre_tipo_reporte (
+    p_id_tipo_reporte IN NUMBER
+) RETURN VARCHAR2
+AS
+    v_nombre VARCHAR2(120);
+BEGIN
+    SELECT nombre_reporte INTO v_nombre
+    FROM tipo_reporte
+    WHERE id_tipo_reporte = p_id_tipo_reporte;
+
+    RETURN v_nombre;
+END;
+/
+
+CREATE OR REPLACE FUNCTION fn_estado_reporte (
+    p_id_reporte IN NUMBER
+) RETURN VARCHAR2
+AS
+    v_estado VARCHAR2(30);
+BEGIN
+    SELECT estado INTO v_estado
+    FROM reportes_generados
+    WHERE id_reporte_generado = p_id_reporte;
+
+    RETURN v_estado;
+END;
+/
+
+--------------------------------------------------------------------
+-- cursores
+--------------------------------------------------------------------
+CREATE OR REPLACE PROCEDURE cur_reportes_usuario (
+    p_id_usuario IN NUMBER
+) AS
+    CURSOR c_rep IS
+        SELECT id_reporte_generado, estado, fecha_creacion
+        FROM reportes_generados
+        WHERE id_usuario = p_id_usuario;
+
+    v_reg c_rep%ROWTYPE;
+BEGIN
+    OPEN c_rep;
+    LOOP
+        FETCH c_rep INTO v_reg;
+        EXIT WHEN c_rep%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE(
+           'Reporte ' || v_reg.id_reporte_generado ||
+           ' Estado: ' || v_reg.estado
+        );
+    END LOOP;
+    CLOSE c_rep;
+END;
+/
+
+
+CCREATE OR REPLACE PROCEDURE cur_reportes_empresa (
+    p_id_empresa IN NUMBER
+) AS
+    CURSOR c_rep_emp IS
+        SELECT rg.id_reporte_generado, rg.estado, ue.id_empresa 
+        FROM reportes_generados rg
+        JOIN usuarios_empresas ue ON ue.id_usuario = rg.id_usuario
+        WHERE ue.id_empresa = p_id_empresa;
+
+    v_reg c_rep_emp%ROWTYPE;
+BEGIN
+    OPEN c_rep_emp;
+    LOOP
+        FETCH c_rep_emp INTO v_reg;
+        EXIT WHEN c_rep_emp%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Reporte empresa: ' || v_reg.id_reporte_generado);
+    END LOOP;
+    CLOSE c_rep_emp;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_reportes_enviados AS
+    CURSOR c_env IS
+        SELECT * FROM reportes_generados WHERE estado = 'Enviado';
+
+    v_reg c_env%ROWTYPE;
+BEGIN
+    OPEN c_env;
+    LOOP
+        FETCH c_env INTO v_reg;
+        EXIT WHEN c_env%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Enviado: ' || v_reg.id_reporte_generado);
+    END LOOP;
+    CLOSE c_env;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_reportes_completados AS
+    CURSOR c_comp IS
+        SELECT id_reporte_generado
+        FROM reportes_generados
+        WHERE estado = 'Completado';
+
+    v_reg c_comp%ROWTYPE;
+BEGIN
+    OPEN c_comp;
+    LOOP
+        FETCH c_comp INTO v_reg;
+        EXIT WHEN c_comp%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Completado: ' || v_reg.id_reporte_generado);
+    END LOOP;
+    CLOSE c_comp;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE cur_tipos_reporte_activos AS
+    CURSOR c_tipo IS
+        SELECT id_tipo_reporte, nombre_reporte
+        FROM tipo_reporte
+        WHERE estado = 'A';
+
+    v_reg c_tipo%ROWTYPE;
+BEGIN
+    OPEN c_tipo;
+    LOOP
+        FETCH c_tipo INTO v_reg;
+        EXIT WHEN c_tipo%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Tipo: ' || v_reg.nombre_reporte);
+    END LOOP;
+    CLOSE c_tipo;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_usuarios_empresa (
+    p_id_empresa IN NUMBER
+) AS
+    CURSOR c_usu IS
+        SELECT id_usuario, nombre
+        FROM usuarios
+        WHERE id_empresa = p_id_empresa;
+
+    v_reg c_usu%ROWTYPE;
+BEGIN
+    OPEN c_usu;
+    LOOP
+        FETCH c_usu INTO v_reg;
+        EXIT WHEN c_usu%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Usuario: ' || v_reg.nombre);
+    END LOOP;
+    CLOSE c_usu;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_backup_logs AS
+    CURSOR c_log IS
+        SELECT id_backup, tipo_backup, fecha_backup
+        FROM backup_logs
+        ORDER BY fecha_backup DESC;
+
+    v_reg c_log%ROWTYPE;
+BEGIN
+    OPEN c_log;
+    LOOP
+        FETCH c_log INTO v_reg;
+        EXIT WHEN c_log%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Backup: ' || v_reg.id_backup);
+    END LOOP;
+    CLOSE c_log;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE cur_parametros_sistema AS
+    CURSOR c_par IS
+        SELECT nombre_parametro, valor_parametro
+        FROM parametros_sistema
+        WHERE estado = 'A';
+
+    v_reg c_par%ROWTYPE;
+BEGIN
+    OPEN c_par;
+    LOOP
+        FETCH c_par INTO v_reg;
+        EXIT WHEN c_par%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Parametro: ' || v_reg.nombre_parametro);
+    END LOOP;
+    CLOSE c_par;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_reportes_categoria (
+    p_categoria IN VARCHAR2
+) AS
+    CURSOR c_cat IS
+        SELECT rg.id_reporte_generado, tr.categoria
+        FROM reportes_generados rg
+        JOIN tipo_reporte tr ON tr.id_tipo_reporte = rg.id_tipo_reporte
+        WHERE tr.categoria = p_categoria;
+
+    v_reg c_cat%ROWTYPE;
+BEGIN
+    OPEN c_cat;
+    LOOP
+        FETCH c_cat INTO v_reg;
+        EXIT WHEN c_cat%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Reporte categoría: ' || v_reg.id_reporte_generado);
+    END LOOP;
+    CLOSE c_cat;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_tipo_reporte_estado (
+    p_estado IN CHAR
+) AS
+    CURSOR c_est IS
+        SELECT id_tipo_reporte, estado
+        FROM tipo_reporte
+        WHERE estado = p_estado;
+
+    v_reg c_est%ROWTYPE;
+BEGIN
+    OPEN c_est;
+    LOOP
+        FETCH c_est INTO v_reg;
+        EXIT WHEN c_est%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Tipo reporte: ' || v_reg.id_tipo_reporte);
+    END LOOP;
+    CLOSE c_est;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE cur_reportes_recientes AS
+    CURSOR c_rec IS
+        SELECT *
+        FROM reportes_generados
+        WHERE fecha_creacion >= SYSDATE - 1;
+
+    v_reg c_rec%ROWTYPE;
+BEGIN
+    OPEN c_rec;
+    LOOP
+        FETCH c_rec INTO v_reg;
+        EXIT WHEN c_rec%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Reciente: ' || v_reg.id_reporte_generado);
+    END LOOP;
+    CLOSE c_rec;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE cur_usuarios_admin AS
+    CURSOR c_adm IS
+        SELECT id_usuario, nombre
+        FROM usuarios
+        WHERE rol = 'admin';
+
+    v_reg c_adm%ROWTYPE;
+BEGIN
+    OPEN c_adm;
+    LOOP
+        FETCH c_adm INTO v_reg;
+        EXIT WHEN c_adm%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('Admin: ' || v_reg.nombre);
+    END LOOP;
+    CLOSE c_adm;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE proc_tickets_pendientes_por_usuario IS
+    CURSOR cur_tickets_pendientes IS
+        SELECT t.id_ticket,
+               t.id_evento,
+               t.id_usuario,
+               t.fecha_compra,
+               t.estado
+        FROM tickets t
+        WHERE t.estado = 'PENDIENTE'
+        ORDER BY t.id_usuario, t.fecha_compra;
+
+    v_id_ticket     tickets.id_ticket%TYPE;
+    v_id_evento     tickets.id_evento%TYPE;
+    v_id_usuario    tickets.id_usuario%TYPE;
+    v_fecha_compra  tickets.fecha_compra%TYPE;
+    v_estado        tickets.estado%TYPE;
+
+BEGIN
+    OPEN cur_tickets_pendientes;
+
+    LOOP
+        FETCH cur_tickets_pendientes INTO 
+            v_id_ticket,
+            v_id_evento,
+            v_id_usuario,
+            v_fecha_compra,
+            v_estado;
+
+        EXIT WHEN cur_tickets_pendientes%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE(
+            'Ticket Pendiente -> ID Ticket: ' || v_id_ticket ||
+            ', ID Evento: ' || v_id_evento ||
+            ', Usuario: ' || v_id_usuario ||
+            ', Fecha Compra: ' || TO_CHAR(v_fecha_compra, 'YYYY-MM-DD HH24:MI') ||
+            ', Estado: ' || v_estado
+        );
+    END LOOP;
+
+    CLOSE cur_tickets_pendientes;
+END;
 /
