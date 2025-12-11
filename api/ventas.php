@@ -8,7 +8,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 require_once __DIR__ . '/../db_connect.php';
 
 $method = $_SERVER ['REQUEST_METHOD'];
-$action = $GET ['action'] ?? '';
+$action = $_GET['action'] ?? '';
 
 try {
     switch ($action) {

@@ -1,7 +1,7 @@
 <?php
 $usuario = "tienda";
 $contrasena = "tienda";
-$cadena = "localhost/PDBTIENDA";  
+$cadena = "oracle/PDBTIENDA";  
 
 $conn = oci_connect($usuario, $contrasena, $cadena, 'AL32UTF8');
 if (!$conn) {
