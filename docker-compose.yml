@@ -6,22 +6,56 @@ services:
       ORACLE_PASSWORD: tienda
       ORACLE_DATABASE: PDBTIENDA
     ports:
-      - "1521:1521"
+      - "1522:1521"  # Puerto externo cambiado a 1522
       - "5500:5500"
     volumes:
       - oracle-data:/opt/oracle/oradata
+    networks:
+      - oracle-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  adminer:
+    build:
+      context: .
+      dockerfile: Dockerfile.adminer
+    container_name: oracle-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - oracle-network
+    depends_on:
+      - oracle
+    environment:
+      ADMINER_DEFAULT_SERVER: oracle
 
   web:
-    image: php:8.2-apache
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: php-oracle-web
     ports:
       - "80:80"
     volumes:
       - ./:/var/www/html
     depends_on:
-      - oracle
-    extra_hosts:
-      - "oracle:host-gateway"
+      oracle:
+        condition: service_healthy
+    networks:
+      - oracle-network
+    environment:
+      ORACLE_HOST: oracle
+      ORACLE_PORT: 1522
+      ORACLE_SERVICE: PDBTIENDA
+      ORACLE_USER: system
+      ORACLE_PASSWORD: tienda
 
 volumes:
   oracle-data:
+
+networks:
+  oracle-network:
+    driver: bridge
