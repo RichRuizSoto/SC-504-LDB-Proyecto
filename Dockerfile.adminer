@@ -1,0 +1,42 @@
+FROM adminer:latest
+
+USER root
+
+# Instalar dependencias necesarias y herramientas de compilación
+RUN apk add --no-cache \
+    libaio \
+    libnsl \
+    libc6-compat \
+    wget \
+    unzip \
+    autoconf \
+    g++ \
+    make \
+    ${PHPIZE_DEPS}
+
+# Descargar e instalar Oracle Instant Client
+WORKDIR /opt/oracle
+RUN wget https://download.oracle.com/otn_software/linux/instantclient/2113000/instantclient-basic-linux.x64-21.13.0.0.0dbru.zip && \
+    wget https://download.oracle.com/otn_software/linux/instantclient/2113000/instantclient-sdk-linux.x64-21.13.0.0.0dbru.zip && \
+    unzip instantclient-basic-linux.x64-21.13.0.0.0dbru.zip && \
+    unzip instantclient-sdk-linux.x64-21.13.0.0.0dbru.zip && \
+    rm -f instantclient-*.zip && \
+    ln -s /opt/oracle/instantclient_21_13/libclntsh.so.21.1 /usr/lib/libclntsh.so && \
+    ln -s /opt/oracle/instantclient_21_13/libocci.so.21.1 /usr/lib/libocci.so
+
+# Configurar variables de entorno para Oracle
+ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_21_13:$LD_LIBRARY_PATH
+ENV PATH=/opt/oracle/instantclient_21_13:$PATH
+
+# Instalar extensiones PHP para Oracle (OCI8 es suficiente para Adminer)
+RUN echo 'instantclient,/opt/oracle/instantclient_21_13' | pecl install oci8 && \
+    docker-php-ext-enable oci8
+
+# Limpiar archivos temporales para reducir el tamaño de la imagen
+RUN rm -rf /tmp/* /var/cache/apk/*
+
+USER adminer
+
+WORKDIR /var/www/html
+
+EXPOSE 8080

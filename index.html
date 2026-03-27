@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Repuestos Zona Honda | Proyecto SC-504</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/login.css" />
+    <link rel="stylesheet" href="css/register.css" />
+    <link rel="stylesheet" href="css/empresas.css" />
+    <link rel="stylesheet" href="css/EmpresasInfo.css">
+
+    <link rel="icon" href="favicon.ico" />
+  </head>
+
+  <body>
+    <header>
+      <h1>🔧 Repuestos Zona Honda</h1>
+      <nav>
+        <a href="#/login">Login</a>
+        <a href="#/register">Registro</a>
+        <a href="#/productos">Productos</a>
+        <a href="#/empresas">Empresas</a>
+        <a href="#/info-empresa">Info Empresa</a>
+        <a href="ventas.html">Punto de Venta</a>
+        <a href="historial.html">Historial</a>
+
+      </nav>
+    </header>
+
+    <!-- En index.html, antes del cierre de </body> -->
+    <div id="toast" class="toast">
+      <span id="toast-icon">ℹ️</span>
+      <span id="toast-text">Mensaje</span>
+    </div>
+
+    <!-- Aquí se cargan dinámicamente las vistas (login, register, productos) -->
+    <main id="view-root" class="wrap"></main>
+
+    <!-- Scripts del frontend MVC -->
+    <script src="js/utils/session.js"></script>
+    <script src="js/services/api.js"></script>
+    <script src="js/utils/ui.js"></script>
+    <script src="js/models/UserModel.js"></script>
+    <script src="js/controllers/AuthController.js"></script>
+    <script src="js/controllers/ProductController.js"></script>
+    <script src="js/views/LoginView.js"></script>
+    <script src="js/views/RegisterView.js"></script>
+    <script src="js/views/ProductosView.js"></script>
+
+    <script src="js/controllers/EmpresaController.js"></script>
+    <script src="js/views/EmpresasView.js"></script>
+    <script src="js/views/EmpresasInfoView.js"></script>
+
+
+    <script src="js/app.js"></script>
+  </body>
+</html>
